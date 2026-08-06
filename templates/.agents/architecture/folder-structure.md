@@ -68,7 +68,13 @@ src/
     users/
       users.module.ts
       users.controller.ts         <!-- SCAFFOLD: keep only if REST or both -->
+      user-reports.controller.ts  <- one controller per sub-resource/route-prefix once the
+                                      feature's surface splits — never one controller class
+                                      growing every route that touches the same model; see
+                                      code-style/module-structure.md's "Multiple controllers
+                                      per module"
       users.service.ts
+      user-reports.service.ts     <- only if the sub-resource's logic is non-trivial, same doc
       dto/              create-user.dto.ts, update-user.dto.ts, user-response.dto.ts
       interfaces/                 <- only if this feature has 2+ reusable interfaces; a single
                                      one-off type stays inline in the file that uses it
