@@ -45,6 +45,55 @@ don't know why, stop and say so instead of pushing anyway. Husky automates this 
   line-wrapping. Never add a formatting rule to ESLint config — that's Prettier's job and the
   two would fight.
 
+## Mechanically Enforced Rules
+
+Several rules in `AGENTS.md` are only real if ESLint actually blocks the violation — a rule that
+only lives in prose gets missed under time pressure. These four are cheap to enforce and must be
+in `eslint.config.js`, not left as review-only:
+
+```js
+{
+  rules: {
+    'no-restricted-imports': ['error', {
+      paths: [
+        {
+          name: '@nestjs/mapped-types',
+          message:
+            "Import PartialType/OmitType/PickType from '@nestjs/swagger' instead — the " +
+            "mapped-types versions silently drop @ApiProperty metadata. See " +
+            "code-style/dto-and-validation.md.",
+        },
+        {
+          name: 'bcrypt',
+          message: "Use 'argon2' (argon2id) instead — see core/auth.md.",
+        },
+        {
+          name: 'bcryptjs',
+          message: "Use 'argon2' (argon2id) instead — see core/auth.md.",
+        },
+      ],
+    }],
+    'no-restricted-syntax': ['error', {
+      selector: "MemberExpression[object.object.name='process'][object.property.name='env']",
+      message:
+        'Read env vars through the Zod-validated ConfigService, not process.env directly. ' +
+        'See code-style/dto-and-validation.md.',
+    }],
+  },
+}
+```
+
+The `process.env` rule needs a per-file override disabling it for the one file that's actually
+allowed to read `process.env` directly — the Zod schema/`validate()` function passed to
+`ConfigModule.forRoot()` has to read the raw environment somewhere. Scope the override to that
+file's path (e.g. `src/core/config/env.schema.ts`), not a blanket exception.
+
+**Not currently lint-enforced, review-only**: constructor-injection-only (no `@Inject()` on a
+class field) — `@darraghor/eslint-plugin-nestjs-typed`'s rule set doesn't guarantee this as of
+writing; verify against its current rule list when actually authoring `eslint.config.js`, and if
+it's still uncovered, this stays a code-review check, not an automated one. Don't claim it's
+enforced in a doc if it isn't.
+
 ## Ignoring files
 
 - ESLint (`eslint.config.js` top-level `ignores` entry) and `.prettierignore` (a real file at
@@ -98,3 +147,5 @@ Wire it into the `pre-commit` Husky hook alongside `lint-staged` so it's non-opt
 - [ ] No formatting rules added to ESLint config; no correctness rules disabled in Prettier.
 - [ ] Lockfile never hand-formatted or ESLint/Prettier-touched.
 - [ ] Generated Prisma client (`generated/`) and migration SQL never hand-edited.
+- [ ] `eslint.config.js` actually has the `no-restricted-imports`/`no-restricted-syntax` block
+      from "Mechanically Enforced Rules" above — not just documented, wired.

@@ -19,6 +19,42 @@ underneath, plus the concrete conventions for whichever transport(s) this projec
 If "both" was chosen, the REST controller and the bot update handler for the same feature call
 the identical service method — that's the whole point of keeping them thin.
 
+## Bootstrap wiring (fixed defaults, regardless of application type)
+
+`main.ts` always wires these, in this rough order — none of them are questionnaire-gated:
+
+```ts
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
+  app.useLogger(app.get(Logger)); // nestjs-pino
+  app.enableShutdownHooks(); // without this, OnModuleDestroy (PrismaService) never fires on SIGTERM
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalFilters(new PrismaExceptionFilter());
+  // REST-only: app.enableVersioning(...), app.enableCors(...), SwaggerModule.setup(...)
+
+  await app.listen(process.env.PORT ?? 3000);
+}
+```
+
+- **`enableShutdownHooks()`** — see `core/README.md`'s Prisma entry; a container orchestrator
+  sends SIGTERM on restart/scale-down, and without this call Nest never runs the lifecycle
+  hooks that close the Prisma connection cleanly.
+- **Global `ClassSerializerInterceptor`** — the fixed response-shaping default, see
+  `code-style/dto-and-validation.md`'s "Response shape" section. Applies to every transport,
+  REST and bot alike, whenever a DTO with `@Exclude()` fields is returned.
+- **Global `PrismaExceptionFilter`** (`src/common/filters/prisma-exception.filter.ts`) — maps
+  `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002` →
+  `ConflictException`, `P2025` → `NotFoundException`, and so on for the codes the project
+  actually hits). Without it a constraint violation surfaces as an unhandled 500. Error
+  responses use Nest's default `HttpException` JSON shape — no custom envelope; the filter's
+  job is making Prisma errors go through a real `HttpException` subclass so they follow that
+  same shape instead of a generic 500.
+- **`GET /health`** (`@nestjs/terminus`) — always wired, not gated by the questionnaire. Checks
+  Prisma connectivity at minimum; add a check per external dependency actually chosen (Redis if
+  BullMQ/caching, RabbitMQ if messaging). A container/orchestrator needs this from day one.
+
 <!-- SCAFFOLD: keep this section only if REST or both was chosen -->
 ## REST
 
@@ -102,8 +138,12 @@ so the pattern is discoverable for the next feature instead of re-derived from s
 ## Review Checklist
 
 - [ ] No business logic inline in a controller/update handler — one call into `modules/*`.
+- [ ] `main.ts` has `enableShutdownHooks()`, the global `ClassSerializerInterceptor`, and the
+      global `PrismaExceptionFilter` — not just the `ValidationPipe`.
+- [ ] `GET /health` responds and actually checks Prisma connectivity (and Redis/RabbitMQ if
+      those were chosen).
 - [ ] REST: every route versioned (`/v1/...`), every DTO `class-validator`-decorated, Swagger
-      annotations present, CORS from env allowlist.
+      annotations present, CORS from env allowlist, `ThrottlerGuard` wired.
 - [ ] Bot: every handler under `updates/`, rate-limited by user/chat id, scenes have a
       cancel/timeout path.
 - [ ] "Both" chosen: REST and bot handlers for the same feature call the identical service

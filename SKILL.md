@@ -76,13 +76,30 @@ Fixed defaults — **never** ask about these, they're locked by design:
   perf/edge pick), no NoSQL/MongoDB branch in v1 of this skill.
 - **Validation**: `class-validator` + `class-transformer` on the HTTP layer, global
   `ValidationPipe` (`whitelist: true, forbidNonWhitelisted: true, transform: true`) wired in
-  `main.ts` unconditionally. Zod for env/config validation (`@nestjs/config` + `validate`).
-  DTO reuse via `PartialType`/`OmitType`/`PickType` imported from `@nestjs/swagger` (not
-  `@nestjs/mapped-types` — see the gotcha in `code-style/dto-and-validation.md`).
+  `main.ts` unconditionally. Zod for env/config validation (`@nestjs/config` + `validate`),
+  enforced by an ESLint rule blocking direct `process.env` reads outside the schema file — see
+  `testing-and-quality.md`'s "Mechanically Enforced Rules". Nested DTO fields require both
+  `@ValidateNested()` and `@Type(() => NestedDto)` — see `code-style/dto-and-validation.md`.
+  DTO reuse via `PartialType`/`OmitType`/`PickType` imported from `@nestjs/swagger`, never
+  `@nestjs/mapped-types` — ESLint-blocked, not just documented (same section).
+- **Response shape**: a global `ClassSerializerInterceptor` + `@Exclude()` on DTO fields is the
+  one fixed serialization mechanism — never a raw Prisma entity returned, never a second
+  serialization approach introduced without an ADR.
 - **Swagger/OpenAPI**: always wired for the REST branch.
 - **CORS**: always configured in `main.ts` via an env-driven origin allowlist, never `*`.
 - **API versioning**: Nest URI Versioning (`/v1/...`), fixed in `architecture/transport-adapter.md`.
+- **Rate limiting**: `@nestjs/throttler` always installed for REST and/or bot, IP-keyed for REST
+  routes, user/chat-id-keyed for bot handlers — never skipped as "not needed yet".
 - **Logging**: `nestjs-pino`, always — structured JSON logs, no plain `Logger` option offered.
+- **Health check**: `GET /health` via `@nestjs/terminus`, always wired, checking Prisma
+  connectivity at minimum — not questionnaire-gated.
+- **Graceful shutdown**: `app.enableShutdownHooks()` always called in `main.ts` — without it,
+  Prisma's `OnModuleDestroy` connection-close hook never fires on container restart.
+- **Prisma error mapping**: a global `PrismaExceptionFilter` (`APP_FILTER`) maps
+  `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception — a Prisma error
+  never surfaces as a bare unhandled 500.
+- **Prisma client generation**: `package.json` always gets `"postinstall": "prisma generate"` —
+  the generated client is gitignored, so a fresh clone/CI needs this to compile at all.
 - **docker-compose.yml**: always generated (dev/test only, never referenced by prod deploy) —
   Postgres always present; Redis added only if BullMQ and/or caching was chosen (one shared
   instance for both); RabbitMQ added only if messaging was chosen.

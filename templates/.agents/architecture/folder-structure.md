@@ -11,6 +11,7 @@ src/
   common/                     <- framework-agnostic + generic cross-cutting pieces
     pipes/
     filters/
+      prisma-exception.filter.ts <- always present, global APP_FILTER, see transport-adapter.md
     interceptors/
     decorators/
     utilities/                 <- zero @nestjs/* imports, plain functions/classes
@@ -19,6 +20,7 @@ src/
       prisma.service.ts
       prisma.module.ts
     logger/
+    health/                     <- always present, GET /health via @nestjs/terminus
     <!-- SCAFFOLD: keep only if auth was chosen -->
     auth/
     <!-- SCAFFOLD: keep only if background jobs was chosen -->

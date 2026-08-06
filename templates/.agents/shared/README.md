@@ -15,7 +15,7 @@ Check this file before building something new; reuse before you build.
 
 | Name | Kind | Path | Doc | Summary |
 | --- | --- | --- | --- | --- |
-| _(none yet)_ | | | | |
+| PrismaExceptionFilter | filter | `common/filters/` | — | Global `APP_FILTER`, maps `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception. Always present, not questionnaire-gated. See `../architecture/transport-adapter.md`. |
 
 Kind is one of: `pipe`, `filter`, `interceptor`, `decorator`, `utility`.
 

@@ -19,6 +19,9 @@ genuinely true — do not check a box you didn't verify.
 - [ ] `docker compose up -d` actually starts Postgres (and Redis/RabbitMQ if those features were
       chosen); `npx prisma migrate dev` runs clean against it.
 - [ ] `PrismaService`/`PrismaModule` under `src/core/prisma/`, registered in `.agents/core/README.md`.
+- [ ] `package.json` has `"postinstall": "prisma generate"` — a fresh
+      `{{PACKAGE_MANAGER}} install` alone produces a working `@prisma/client` import, nobody has
+      to run it by hand.
 
 ## Validation, logging, transport
 
@@ -26,11 +29,24 @@ genuinely true — do not check a box you didn't verify.
       all `true`.
 - [ ] `ConfigModule` validates env vars via a Zod schema — startup fails loudly on a missing var,
       not silently on first use.
+- [ ] Every DTO field that's a nested object/array of objects has both `@ValidateNested()` and
+      `@Type(() => NestedDto)` — spot-check by submitting an invalid nested value and confirming
+      the request is actually rejected, not silently accepted.
 - [ ] `nestjs-pino` wired; app boot logs are structured JSON, not the default Nest logger output.
+- [ ] `main.ts` calls `app.enableShutdownHooks()`.
+- [ ] Global `ClassSerializerInterceptor` wired in `main.ts`; a DTO with an `@Exclude()` field
+      (e.g. a password hash) actually comes back stripped in a real response, not just present
+      in the interceptor registration.
+- [ ] Global `PrismaExceptionFilter` wired as `APP_FILTER`; triggering a unique-constraint
+      violation returns a `409`, not an unhandled `500`.
+- [ ] `GET /health` responds `200` and its Prisma indicator actually fails if the DB is
+      unreachable (verify by stopping the `docker-compose.yml` Postgres service and re-checking).
 - [ ] REST branch (if chosen): Swagger served at `/docs`, URI versioning active (`/v1/...` in
-      route paths), CORS restricted to the `CORS_ORIGIN` env allowlist — never `*`.
+      route paths), CORS restricted to the `CORS_ORIGIN` env allowlist — never `*`, IP-keyed
+      `ThrottlerGuard` wired and actually rejects a burst of requests past the limit.
 - [ ] Bot branch (if chosen): platform library installed and connecting with a real (or
-      placeholder, clearly marked) token from env; `src/bot/updates/` has at least one handler.
+      placeholder, clearly marked) token from env; `src/bot/updates/` has at least one handler;
+      throttler guard keyed by user/chat id, not IP.
 - [ ] "Both" chosen: REST controller and bot update handler both call into the same
       `src/modules/*` service — no duplicated business logic between the two transports.
 
@@ -39,7 +55,8 @@ genuinely true — do not check a box you didn't verify.
 - [ ] Auth: access token short-lived and returned in the response body (never in a cookie);
       refresh token httpOnly cookie scoped to `/auth/refresh`; rotation implemented (old hash
       invalidated on refresh); `csrf-csrf` wired on the refresh route; passwords hashed with
-      `argon2id`; `RolesGuard` present.
+      `argon2id` (`bcrypt`/`bcryptjs` not in `package.json` dependencies at all); `RolesGuard`
+      present.
 - [ ] Background jobs: BullMQ wired against the Redis service, one example processor exists.
 - [ ] Caching: `@nestjs/cache-manager` + `@keyv/redis` wired, cache-aside example present with an
       explicit TTL — not left unbounded.
@@ -60,6 +77,11 @@ genuinely true — do not check a box you didn't verify.
       `typescript-eslint` `strict-type-checked` + `simple-import-sort` +
       `consistent-type-imports` + a restricted-import boundary rule, `eslint-config-prettier`
       last), lints with zero errors on the generated skeleton.
+- [ ] The `no-restricted-imports` (`@nestjs/mapped-types`, `bcrypt`, `bcryptjs`) and
+      `no-restricted-syntax` (`process.env` outside the config schema file) rules from
+      `.agents/testing-and-quality.md`'s "Mechanically Enforced Rules" are actually present in
+      `eslint.config.js` — confirm by writing a throwaway file that violates each and running
+      lint, not just reading the config.
 - [ ] `lint`, `format`, `format:check` scripts exist and run clean.
 - [ ] `package.json` has `"prepare": "husky"`. Husky installed: `pre-commit` runs `lint-staged`
       + the non-English content check, `pre-push` runs the full lint + format + test gate.

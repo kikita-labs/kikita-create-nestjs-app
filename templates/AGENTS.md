@@ -35,15 +35,25 @@ strategy), also read:
 
 - Latest stable NestJS only. Modules by feature (`src/modules/<feature>/`), not by technical
   layer — see `.agents/architecture/folder-structure.md`.
-- Constructor-based dependency injection only — no property injection, no service locator.
+- Constructor-based dependency injection only — no property injection, no service locator. Not
+  currently caught by lint (verify against `@darraghor/eslint-plugin-nestjs-typed`'s current
+  rule set when the project's `eslint.config.js` is authored); treat as a review-blocking rule
+  until/unless it is.
 - Every DTO uses `class-validator`/`class-transformer` decorators. The global `ValidationPipe`
   (`whitelist`, `forbidNonWhitelisted`, `transform` all `true`) is wired in `main.ts` and must
-  stay that way — never disable it per-route to "make validation easier".
-- DTO reuse (`Update*` from `Create*`) goes through `PartialType`/`OmitType`/`PickType` imported
-  from `@nestjs/swagger`, never `@nestjs/mapped-types` — see
+  stay that way — never disable it per-route to "make validation easier". A nested-object/
+  array-of-objects field needs both `@ValidateNested()` and `@Type(() => NestedDto)` — missing
+  `@Type()` makes validation silently skip the nested value. See
   `.agents/code-style/dto-and-validation.md`.
+- DTO reuse (`Update*` from `Create*`) goes through `PartialType`/`OmitType`/`PickType` imported
+  from `@nestjs/swagger`, never `@nestjs/mapped-types` — ESLint-blocked
+  (`no-restricted-imports`, see `.agents/testing-and-quality.md`), not just documented.
 - Env/config values are validated by the Zod schema in `ConfigModule.forRoot({ validate })` —
-  never read `process.env` directly in application code.
+  never read `process.env` directly in application code outside that schema file.
+  ESLint-blocked (`no-restricted-syntax`, see `.agents/testing-and-quality.md`).
+- Responses never leak a raw Prisma entity — return a DTO with `@Exclude()` on sensitive fields
+  and rely on the global `ClassSerializerInterceptor` wired in `main.ts`. No competing
+  serialization approach without an ADR. See `.agents/code-style/dto-and-validation.md`.
 - Prisma is the only ORM; Postgres is the only database. Do not add a second ORM or database
   driver without an ADR (`.agents/decisions/README.md`).
 - Path aliases are mandatory for cross-module imports. See
@@ -53,10 +63,19 @@ strategy), also read:
 - CORS is always restricted to the `CORS_ORIGIN` env allowlist — never `*`.
 - API routes are versioned (`/v1/...`) via Nest URI Versioning — see
   `.agents/architecture/transport-adapter.md`.
-<!-- SCAFFOLD: keep the next line only if auth was chosen -->
+- `main.ts` always calls `app.enableShutdownHooks()` — without it, `PrismaService`'s
+  `OnModuleDestroy` hook never fires on SIGTERM and connections leak on every container
+  restart. Never remove this call.
+- `GET /health` (`@nestjs/terminus`) is always present, not questionnaire-gated. A global
+  `PrismaExceptionFilter` maps Prisma constraint/not-found errors to the matching HTTP
+  exception — a Prisma error must never surface as an unhandled 500. See
+  `.agents/architecture/transport-adapter.md`'s Bootstrap wiring section.
+<!-- SCAFFOLD: keep the next two lines only if auth was chosen -->
 - Auth follows the one fixed pattern in `.agents/core/auth.md` — short-lived access token,
   rotated refresh token in an httpOnly cookie, CSRF protection on the refresh route. Do not
   introduce an alternate auth strategy without an ADR.
+- Passwords are hashed with `argon2id` (`argon2` package) — `bcrypt`/`bcryptjs` are
+  ESLint-blocked (`no-restricted-imports`).
 - All tracked repository content is English-only, including TSDoc and comments. No Cyrillic,
   no mojibake.
 - Never add `Co-authored-by`, `Generated-by`, AI attribution, or assistant attribution lines to
