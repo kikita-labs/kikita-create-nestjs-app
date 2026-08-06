@@ -77,6 +77,10 @@ strategy), also read:
 - CORS is always restricted to the `CORS_ORIGIN` env allowlist — never `*`.
 - API routes are versioned (`/v1/...`) via Nest URI Versioning — see
   `.agents/architecture/transport-adapter.md`.
+- Route path segments are enum members, not bare string literals repeated across a controller's
+  `@Controller()`/`@Get()`/`@Post()` decorators and any e2e test/Swagger tag that references the
+  same path — same convention as `kikita-create-angular-app`'s routing rule. See
+  `.agents/code-style/module-structure.md`'s "Multiple controllers per module" section.
 - `main.ts` always calls `app.enableShutdownHooks()` — without it, `PrismaService`'s
   `OnModuleDestroy` hook never fires on SIGTERM and connections leak on every container
   restart. Never remove this call.

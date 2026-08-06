@@ -40,24 +40,38 @@ modules/users/
   user-reports.controller.ts   <- /v1/users/reports/... (sub-resource)
   users.service.ts
   user-reports.service.ts      <- only if the sub-resource's logic is non-trivial, see below
+  enums/
+    users-routes.enum.ts        <- path segments, see below
   dto/
     create-user.dto.ts
     update-user.dto.ts
     user-report-query.dto.ts
 ```
 
+Path segments are enum members, not repeated string literals — see
+`../architecture/transport-adapter.md`'s "Route paths" bullet:
+
 ```ts
-@Controller({ path: 'users', version: '1' })
+// modules/users/enums/users-routes.enum.ts
+export enum UsersRoutes {
+  Base = 'users',
+  ReportsBase = 'users/reports',
+  Unresolved = 'unresolved',
+}
+```
+
+```ts
+@Controller({ path: UsersRoutes.Base, version: '1' })
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   // GET /v1/users, GET /v1/users/:id, POST /v1/users, ...
 }
 
-@Controller({ path: 'users/reports', version: '1' })
+@Controller({ path: UsersRoutes.ReportsBase, version: '1' })
 export class UserReportsController {
   constructor(private readonly userReportsService: UserReportsService) {}
 
-  @Get('unresolved')
+  @Get(UsersRoutes.Unresolved)
   findUnresolved(): Promise<UserReportResponseDto[]> {
     return this.userReportsService.findUnresolved();
   }
