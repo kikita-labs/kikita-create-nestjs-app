@@ -1,0 +1,8 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/*
+!.idea/icon.svg
+!.idea/icon_dark.svg

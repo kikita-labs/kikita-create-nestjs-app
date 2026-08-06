@@ -28,8 +28,8 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
 
 5. **Wire validation** (fixed default, no question asked):
    - `{{PACKAGE_MANAGER}} add class-validator class-transformer zod @nestjs/config`.
-   - Global `ValidationPipe` in `main.ts`: `{ whitelist: true, forbidNonWhitelisted: true,
-     transform: true }`.
+   - Global `ValidationPipe` in `main.ts`:
+     `{ whitelist: true, forbidNonWhitelisted: true, transform: true }`.
    - `ConfigModule.forRoot({ validate })` with a Zod schema validating every env var the
      project actually uses — start with `DATABASE_URL`, `PORT`, `CORS_ORIGIN`, extend per
      feature chosen below.

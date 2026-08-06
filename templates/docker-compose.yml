@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
-  <!-- SCAFFOLD: keep only if background jobs or caching was chosen -->
+  # SCAFFOLD: keep only if background jobs or caching was chosen
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -23,7 +23,7 @@ services:
     volumes:
       - redis-data:/data
 
-  <!-- SCAFFOLD: keep only if messaging was chosen -->
+  # SCAFFOLD: keep only if messaging was chosen
   rabbitmq:
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
 
 volumes:
   postgres-data:
-  <!-- SCAFFOLD: keep only if background jobs or caching was chosen -->
+  # SCAFFOLD: keep only if background jobs or caching was chosen
   redis-data:
-  <!-- SCAFFOLD: keep only if messaging was chosen -->
+  # SCAFFOLD: keep only if messaging was chosen
   rabbitmq-data:

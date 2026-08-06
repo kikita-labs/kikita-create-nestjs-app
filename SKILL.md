@@ -121,9 +121,10 @@ Run `checklist.md` in full before reporting success.
   `README.md` hub: `.agents/code-style/`, `.agents/architecture/`, `.agents/shared/`,
   `.agents/core/`, `.agents/decisions/`.
 - `.agents/shared/README.md` registers `src/common/` (framework-agnostic utilities — zero
-  `@nestjs/*` imports — plus generic pipes/filters/interceptors/decorators). `.agents/core/
-  README.md` registers `src/core/` app-wide singletons (auth, Prisma client provider, logger,
-  queue, cache, storage — each with its own conditional doc file when that feature was chosen).
+  `@nestjs/*` imports — plus generic pipes/filters/interceptors/decorators).
+  `.agents/core/README.md` registers `src/core/` app-wide singletons (auth, Prisma client
+  provider, logger, queue, cache, storage — each with its own conditional doc file when that
+  feature was chosen).
 - `.agents/decisions/README.md` explains when a short ADR is required (layer direction, message
   broker migration, versioning strategy change) — always generated, starts with no ADR files.
 - All tracked file content — including TSDoc — is English only. No Cyrillic, no mojibake.
