@@ -137,6 +137,13 @@ Platform for this project: {{BOT_PLATFORM}}.
     }
   }
   ```
+- **Horizontal scaling note**: Telegram long-polling (Telegraf's default) doesn't tolerate
+  multiple replicas of this app running at once — they'd compete for the same updates. This
+  isn't a reason to split the bot into a separate service (a single-process "both" app is still
+  the right default — see the ADR trigger list in `../decisions/README.md` for when splitting
+  actually is warranted); it's a reason to switch to webhook mode
+  (`launchOptions: { webhook: { domain, path } }`) once this app needs more than one replica —
+  a webhook is just another HTTP endpoint and scales the same way the rest of the app does.
 - **Multi-step flows**: Telegraf's `Scenes`/`WizardScene` or the equivalent construct on another
   platform. Keep scene state minimal (IDs, not full entities) and always have a cancel/timeout
   path — a stuck scene must not become the only way to interact with the bot.
