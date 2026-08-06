@@ -34,7 +34,14 @@ strategy), also read:
 ## Non-Negotiable Rules
 
 - Latest stable NestJS only. Modules by feature (`src/modules/<feature>/`), not by technical
-  layer — see `.agents/architecture/folder-structure.md`.
+  layer — see `.agents/architecture/folder-structure.md`. Every file type (guard, interceptor,
+  filter, decorator, middleware, exception, interface, enum, constant, utility) has exactly one
+  correct folder per that file's table — never invent an ad hoc top-level folder for something
+  it already covers.
+- No reusable `interface`/`type`/`enum`/exported `const` left inline in a `.controller.ts`/
+  `.service.ts`/`.dto.ts` — it moves to the matching `interfaces/`/`enums/`/`constants/`
+  subfolder the moment a second file needs it. See
+  `.agents/architecture/folder-structure.md`.
 - Constructor-based dependency injection only — no property injection, no service locator. Not
   currently caught by lint (verify against `@darraghor/eslint-plugin-nestjs-typed`'s current
   rule set when the project's `eslint.config.js` is authored); treat as a review-blocking rule
@@ -66,7 +73,9 @@ strategy), also read:
 - `main.ts` always calls `app.enableShutdownHooks()` — without it, `PrismaService`'s
   `OnModuleDestroy` hook never fires on SIGTERM and connections leak on every container
   restart. Never remove this call.
-- `GET /health` (`@nestjs/terminus`) is always present, not questionnaire-gated. A global
+- `GET /health/live` and `GET /health/ready` (`@nestjs/terminus`) are always present, not
+  questionnaire-gated, and never merged into one route — liveness checks nothing external,
+  readiness checks every wired dependency. See `.agents/core/health.md`. A global
   `PrismaExceptionFilter` maps Prisma constraint/not-found errors to the matching HTTP
   exception — a Prisma error must never surface as an unhandled 500. See
   `.agents/architecture/transport-adapter.md`'s Bootstrap wiring section.

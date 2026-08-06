@@ -58,10 +58,11 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
      strips them automatically.
      Do not return a raw Prisma entity from a controller/update handler; do not invent a second
      serialization approach.
-   - `{{PACKAGE_MANAGER}} add @nestjs/terminus`, wire a `HealthModule` with a `GET /health`
-     route (`@nestjs/terminus`'s `HealthCheckService` + a Prisma-connectivity indicator at
-     minimum). Always generated — a container/orchestrator needs a liveness endpoint from day
-     one, this isn't questionnaire-gated.
+   - `{{PACKAGE_MANAGER}} add @nestjs/terminus`, wire a `HealthModule` with **two** routes —
+     `GET /health/live` (checks nothing external, only "is the process responsive") and
+     `GET /health/ready` (checks Prisma + any chosen Redis/RabbitMQ dependency) — never a single
+     merged `GET /health`. See `templates/.agents/core/health.md` for why liveness must never
+     depend on an external service. Always generated, not questionnaire-gated.
    - A global `PrismaExceptionFilter` (`APP_FILTER` provider) under `src/common/filters/`
      mapping `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002`
      unique-constraint → `ConflictException`, `P2025` record-not-found →
@@ -161,8 +162,9 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
       `messaging.md` only if messaging was chosen.
     - `.agents/shared/README.md` and `.agents/core/README.md` — both start with a registry
       table pre-populated with the always-on entries (Prisma, Logger, Health, the global
-      Prisma exception filter), plus `core/auth.md` / `core/queue.md` / `core/cache.md` /
-      `core/storage.md` only for the features actually chosen.
+      Prisma exception filter), plus `core/health.md` (always, not gated) and `core/auth.md` /
+      `core/queue.md` / `core/cache.md` / `core/storage.md` only for the features actually
+      chosen.
     - `.agents/decisions/README.md` — always generated, starts with no ADR files.
     - Fill every `{{PLACEHOLDER}}` with the real questionnaire answer. Leave no placeholder text.
     - Update `AGENTS.md`'s "Must Read" list to only reference files that were actually generated.

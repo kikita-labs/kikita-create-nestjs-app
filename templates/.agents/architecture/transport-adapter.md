@@ -53,9 +53,11 @@ async function bootstrap() {
   responses use Nest's default `HttpException` JSON shape — no custom envelope; the filter's
   job is making Prisma errors go through a real `HttpException` subclass so they follow that
   same shape instead of a generic 500.
-- **`GET /health`** (`@nestjs/terminus`) — always wired, not gated by the questionnaire. Checks
-  Prisma connectivity at minimum; add a check per external dependency actually chosen (Redis if
-  BullMQ/caching, RabbitMQ if messaging). A container/orchestrator needs this from day one.
+- **`GET /health/live` + `GET /health/ready`** (`@nestjs/terminus`) — always wired, not gated by
+  the questionnaire, always two separate routes, never merged. Liveness checks nothing external;
+  readiness checks Prisma plus every external dependency actually chosen (Redis if
+  BullMQ/caching, RabbitMQ if messaging). See `core/health.md` for why merging them is a
+  restart-storm risk, not just a style preference.
 
 <!-- SCAFFOLD: keep this section only if REST or both was chosen -->
 ## REST
@@ -142,8 +144,8 @@ so the pattern is discoverable for the next feature instead of re-derived from s
 - [ ] No business logic inline in a controller/update handler — one call into `modules/*`.
 - [ ] `main.ts` has `enableShutdownHooks()`, the global `ClassSerializerInterceptor`, and the
       global `PrismaExceptionFilter` — not just the `ValidationPipe`.
-- [ ] `GET /health` responds and actually checks Prisma connectivity (and Redis/RabbitMQ if
-      those were chosen).
+- [ ] `GET /health/live` and `GET /health/ready` are two separate routes; only `/ready` checks
+      Prisma connectivity (and Redis/RabbitMQ if those were chosen).
 - [ ] REST: every route versioned (`/v1/...`), every DTO `class-validator`-decorated, Swagger
       annotations present, CORS from env allowlist, `ThrottlerGuard` wired.
 - [ ] Bot: every handler under `updates/`, rate-limited by user/chat id, scenes have a

@@ -39,8 +39,10 @@ genuinely true — do not check a box you didn't verify.
       in the interceptor registration.
 - [ ] Global `PrismaExceptionFilter` wired as `APP_FILTER`; triggering a unique-constraint
       violation returns a `409`, not an unhandled `500`.
-- [ ] `GET /health` responds `200` and its Prisma indicator actually fails if the DB is
-      unreachable (verify by stopping the `docker-compose.yml` Postgres service and re-checking).
+- [ ] `GET /health/live` responds `200` and checks nothing external (verify it stays `200` even
+      with the `docker-compose.yml` Postgres service stopped). `GET /health/ready` responds `200`
+      normally and fails (`503`) when Postgres is stopped, recovering once it's back — see
+      `.agents/core/health.md`.
 - [ ] REST branch (if chosen): Swagger served at `/docs`, URI versioning active (`/v1/...` in
       route paths), CORS restricted to the `CORS_ORIGIN` env allowlist — never `*`, IP-keyed
       `ThrottlerGuard` wired and actually rejects a burst of requests past the limit.

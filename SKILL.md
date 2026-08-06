@@ -91,8 +91,10 @@ Fixed defaults — **never** ask about these, they're locked by design:
 - **Rate limiting**: `@nestjs/throttler` always installed for REST and/or bot, IP-keyed for REST
   routes, user/chat-id-keyed for bot handlers — never skipped as "not needed yet".
 - **Logging**: `nestjs-pino`, always — structured JSON logs, no plain `Logger` option offered.
-- **Health check**: `GET /health` via `@nestjs/terminus`, always wired, checking Prisma
-  connectivity at minimum — not questionnaire-gated.
+- **Health checks**: `@nestjs/terminus`, always wired, not questionnaire-gated — two separate
+  routes, `GET /health/live` (process-only, no external checks) and `GET /health/ready`
+  (Prisma + any chosen Redis/RabbitMQ dependency), never merged into one. See
+  `core/health.md`.
 - **Graceful shutdown**: `app.enableShutdownHooks()` always called in `main.ts` — without it,
   Prisma's `OnModuleDestroy` connection-close hook never fires on container restart.
 - **Prisma error mapping**: a global `PrismaExceptionFilter` (`APP_FILTER`) maps

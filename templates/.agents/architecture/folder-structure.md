@@ -1,54 +1,131 @@
 # Folder Structure
 
 Feature-based, not layer-based: a module owns everything it needs (controller/update-handler,
-service, DTOs, its own spec files) in one folder. Never split by technical layer at the top
-level (no `src/controllers/`, `src/services/`, `src/dtos/` siblings).
+service, DTOs, guards, its own spec files) in one folder. Never split by technical layer at the
+top level (no `src/controllers/`, `src/services/`, `src/dtos/` siblings). Every file type used
+in this project has exactly one correct home — this section is the exhaustive map, not a partial
+example. If a new file doesn't obviously fit a row below, that's a signal to stop and ask, not to
+invent a new top-level folder.
 
 ```
 src/
-  main.ts                    <- bootstrap, global pipes/filters, versioning, CORS, Swagger
-  app.module.ts               <- root module, imports every feature module + core/common
-  common/                     <- framework-agnostic + generic cross-cutting pieces
-    pipes/
-    filters/
-      prisma-exception.filter.ts <- always present, global APP_FILTER, see transport-adapter.md
-    interceptors/
-    decorators/
-    utilities/                 <- zero @nestjs/* imports, plain functions/classes
-  core/                        <- app-wide singletons, registered in core/README.md
+  main.ts                      <- bootstrap only, see architecture/transport-adapter.md
+  app.module.ts                 <- root module, imports every feature module + core/common
+  common/                       <- reusable, NO app-wide state — could be copy-pasted into
+                                    another Nest project and still work standalone
+    pipes/          *.pipe.ts
+    filters/         *.filter.ts
+      prisma-exception.filter.ts  <- always present, global APP_FILTER
+    interceptors/    *.interceptor.ts
+    guards/          *.guard.ts        <- cross-feature guards only (ThrottlerGuard subclass,
+                                           RolesGuard); a guard used by exactly one feature
+                                           lives in that feature's own guards/ instead
+    middleware/      *.middleware.ts   <- e.g. request-id middleware; NOT global pipes/filters,
+                                           those are their own folders above
+    decorators/      *.decorator.ts    <- custom param/method decorators (@CurrentUser())
+    exceptions/      *.exception.ts    <- custom classes extending HttpException; NOT filters
+                                           (a filter catches/maps, an exception is thrown)
+    interfaces/      *.interface.ts    <- cross-feature shared interfaces/types only
+    enums/           *.enum.ts         <- cross-feature shared enums only
+    constants/       *.constant.ts     <- cross-feature shared constants only
+    utilities/       *.util.ts         <- zero @nestjs/* imports, plain functions/classes,
+                                           enforced by ESLint (architecture/README.md)
+  core/                          <- app-wide singletons, exactly one instance for the whole app,
+                                    registered in core/README.md
+    config/
+      env.schema.ts              <- Zod schema + validate(), the one file allowed to read
+                                     process.env directly (code-style/dto-and-validation.md)
     prisma/
       prisma.service.ts
       prisma.module.ts
     logger/
-    health/                     <- always present, GET /health via @nestjs/terminus
+    health/                       <- always present, see core/health.md
+      health.controller.ts
+      health.module.ts
+      indicators/                 <- one *.health-indicator.ts per external dependency actually
+                                      wired (Prisma always; Redis/RabbitMQ if chosen)
     <!-- SCAFFOLD: keep only if auth was chosen -->
     auth/
+      auth.controller.ts
+      auth.service.ts
+      auth.module.ts
+      guards/         jwt-auth.guard.ts, roles.guard.ts
+      strategies/     jwt.strategy.ts    <- Passport strategies
+      decorators/     roles.decorator.ts, current-user.decorator.ts
+      dto/            login.dto.ts, refresh.dto.ts
     <!-- SCAFFOLD: keep only if background jobs was chosen -->
-    queue/
+    queue/            queue.module.ts     <- shared BullMQ connection wiring only; individual
+                                              queues/processors live in the owning feature module
     <!-- SCAFFOLD: keep only if caching was chosen -->
-    cache/
+    cache/            cache.module.ts
     <!-- SCAFFOLD: keep only if file uploads was chosen -->
     storage/
-  modules/                     <- business features, one folder per feature
+      storage.interface.ts
+      local-storage.adapter.ts
+      s3-storage.adapter.ts
+      storage.module.ts
+  modules/                       <- business features, one folder per feature
     users/
       users.module.ts
-      users.controller.ts       <!-- SCAFFOLD: keep only if REST or both -->
+      users.controller.ts         <!-- SCAFFOLD: keep only if REST or both -->
       users.service.ts
-      dto/
-        create-user.dto.ts
-        update-user.dto.ts
+      dto/              create-user.dto.ts, update-user.dto.ts, user-response.dto.ts
+      interfaces/                 <- only if this feature has 2+ reusable interfaces; a single
+                                     one-off type stays inline in the file that uses it
+      enums/                      <- only if this feature has a reusable enum
+      constants/                  <- only if this feature has a reusable constant/lookup table
+      guards/                     <- only if this feature has a guard nothing else needs
       users.service.spec.ts
   <!-- SCAFFOLD: keep only if bot or both was chosen -->
   bot/
     bot.module.ts
-    updates/                    <- generic event-handler layer, see transport-adapter.md
-      start.update.ts
-    scenes/                     <- multi-step conversation flows, if the platform supports them
+    updates/          *.update.ts    <- generic event-handler layer, see transport-adapter.md
+    scenes/           *.scene.ts     <- multi-step conversation flows, if the platform has them
 prisma/
   schema.prisma
   migrations/
-test/                           <!-- SCAFFOLD: keep only if e2e tests were chosen -->
+test/                             <!-- SCAFFOLD: keep only if e2e tests were chosen -->
 ```
+
+## File-type → folder, quick lookup
+
+| File type | Suffix | Feature-specific home | Cross-feature home |
+| --- | --- | --- | --- |
+| Controller | `.controller.ts` | `modules/<feature>/` | — (controllers are never cross-feature) |
+| Service | `.service.ts` | `modules/<feature>/` | `core/<name>/` if it's a true app-wide singleton |
+| Module | `.module.ts` | `modules/<feature>/` | `core/<name>/` |
+| DTO | `.dto.ts` | `modules/<feature>/dto/` | — |
+| Bot update handler | `.update.ts` | `bot/updates/` | — |
+| Bot scene | `.scene.ts` | `bot/scenes/` | — |
+| Queue processor | `.processor.ts` | `modules/<feature>/` (owning feature) | — |
+| Passport strategy | `.strategy.ts` | — | `core/auth/strategies/` |
+| Pipe | `.pipe.ts` | `modules/<feature>/` if feature-only | `common/pipes/` |
+| Filter | `.filter.ts` | `modules/<feature>/` if feature-only | `common/filters/` |
+| Interceptor | `.interceptor.ts` | `modules/<feature>/` if feature-only | `common/interceptors/` |
+| Guard | `.guard.ts` | `modules/<feature>/guards/` | `common/guards/` or `core/auth/guards/` |
+| Middleware | `.middleware.ts` | — (middleware is applied app-wide or per-module in `configure()`) | `common/middleware/` |
+| Param/method decorator | `.decorator.ts` | `modules/<feature>/` if feature-only | `common/decorators/` |
+| Custom exception | `.exception.ts` | `modules/<feature>/` if feature-only | `common/exceptions/` |
+| Interface/type | `.interface.ts` | `modules/<feature>/interfaces/` (2+ reusable) or inline (1-off) | `common/interfaces/` |
+| Enum | `.enum.ts` | `modules/<feature>/enums/` | `common/enums/` |
+| Constant | `.constant.ts` | `modules/<feature>/constants/` | `common/constants/` |
+| Utility function | `.util.ts` | `modules/<feature>/` if feature-only | `common/utilities/` (zero `@nestjs/*` imports) |
+| Test | `.spec.ts` | next to the file under test | next to the file under test |
+| Storage adapter | `.adapter.ts` | — | `core/storage/` |
+| Health indicator | `.health-indicator.ts` | — | `core/health/indicators/` |
+
+A file moves from a feature's own subfolder to the matching `common/` folder the moment a
+**second** feature needs it — not preemptively. Don't create an empty `interfaces/`/`enums/`/
+`constants/`/`guards/` subfolder in a feature that has nothing to put in it yet — create the
+subfolder in the same commit as the first file that actually belongs there.
+
+## No inline reusable declarations
+
+An `interface`/`type`/`enum`/exported `const` meant to be reused across more than the one file
+that declares it never stays inline in a `.controller.ts`/`.service.ts`/`.dto.ts` — it goes in
+the matching `interfaces/`/`enums`/`constants/` subfolder from the table above, even if that
+means creating the subfolder for the first time in that feature. A one-off type used by exactly
+one function in exactly one file is the only case allowed to stay inline.
 
 ## `common/` vs `core/` vs `modules/`
 
@@ -57,7 +134,7 @@ test/                           <!-- SCAFFOLD: keep only if e2e tests were chose
   different Nest project and still work standalone.
 - `core/` — singletons that exist **exactly once for the whole app** and usually hold or wrap
   state/connections: the Prisma client, the auth module, the queue/cache/storage wiring, the
-  logger. Registered in `.agents/core/README.md`.
+  logger, health checks. Registered in `.agents/core/README.md`.
 - `modules/` — business features. Each imports from `common/` and `core/`, never the other way
   around (a `core/` provider must not depend on a `modules/*` service — that's an inverted
   dependency and a sign the logic belongs in `modules/` instead).
@@ -74,7 +151,13 @@ REST and bot transports when both are chosen. See `transport-adapter.md`.
 
 - [ ] No top-level `controllers/`/`services/`/`dtos/` layer folders — everything grouped by
       feature under `modules/`.
+- [ ] Every file placed per the file-type table above — no ad hoc top-level folder invented for
+      a file type already covered by the table.
+- [ ] No reusable `interface`/`enum`/exported `const` left inline — moved to the matching
+      subfolder the moment a second file needs it.
 - [ ] Nothing under `common/utilities/` imports `@nestjs/*`.
 - [ ] Nothing under `core/` imports from `modules/*`.
+- [ ] No empty `interfaces/`/`enums/`/`constants/`/`guards/` subfolder committed with nothing in
+      it — created only when the first file that belongs there exists.
 - [ ] Every module folder has a barrel `index.ts` if it holds more than its own module/
       controller/service files (see `aliases-and-barrels.md`).

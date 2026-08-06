@@ -21,9 +21,10 @@ given task; this file is the flat map of everything that exists under `.agents/`
 - [architecture/](./architecture/README.md) — folder layout, aliases, module boundaries,
   transport adapter (REST/bot), messaging.
 - [shared/](./shared/README.md) — registry of `src/common/` (framework-agnostic utilities and
-  generic pipes/filters/interceptors/decorators).
-- [core/](./core/README.md) — registry of `src/core/` app-wide singletons (Prisma client, auth,
-  logger, queue, cache, storage).
+  generic pipes/filters/interceptors/guards/middleware/decorators/exceptions/interfaces/enums/
+  constants).
+- [core/](./core/README.md) — registry of `src/core/` app-wide singletons (Prisma client, config
+  schema, logger, health checks, auth, queue, cache, storage).
 - [decisions/](./decisions/README.md) — ADRs for hard-to-reverse architectural changes.
 
 Read `documentation.md` before adding, moving, or restructuring anything here. It's the master

@@ -11,7 +11,7 @@ client). Not a dumping ground for "things that didn't fit elsewhere" — see
 | --- | --- | --- | --- | --- |
 | PrismaService | service | `core/prisma/` | — | Wraps `PrismaClient`, hooks `OnModuleInit`/`OnModuleDestroy` for connection lifecycle. Global. Lifecycle hooks only fire because `main.ts` calls `app.enableShutdownHooks()` — see `../architecture/transport-adapter.md`. |
 | Logger | service | `core/logger/` | — | `nestjs-pino` structured JSON logger, wired as the app's bootstrap logger. Global. |
-| Health | module | `core/health/` | — | `GET /health` via `@nestjs/terminus`, checks Prisma connectivity (+ Redis/RabbitMQ if chosen). Always present, not questionnaire-gated. |
+| Health | module | `core/health/` | [health.md](./health.md) | `@nestjs/terminus`, two routes: `/health/live` (process-only) and `/health/ready` (Prisma + Redis/RabbitMQ if chosen). Always present, not questionnaire-gated. |
 <!-- SCAFFOLD: keep only if auth was chosen -->
 | Auth | module | `core/auth/` | [auth.md](./auth.md) | Access/refresh JWT, `RolesGuard`, `argon2id` hashing. |
 <!-- SCAFFOLD: keep only if background jobs was chosen -->
