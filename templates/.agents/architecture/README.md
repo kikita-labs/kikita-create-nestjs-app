@@ -27,17 +27,34 @@ documenting it) needs an ADR — see `../decisions/README.md`.
 Two layers, don't rely on discipline alone:
 
 - **From day one**: an ESLint restricted-import rule (`no-restricted-imports` or
-  `eslint-plugin-boundaries`) blocking a module from importing another module's internals
-  directly, and — specifically — any `@nestjs/*` import inside `src/common/utilities/**`. This is
-  cheap to set up at scaffold time and catches violations before review. Shape, using
-  `no-restricted-imports`'s `patterns` option:
+  `eslint-plugin-boundaries`) blocking a module from importing another module's genuinely
+  private subfolders, and — specifically — any `@nestjs/*` import inside
+  `src/common/utilities/**`. This is cheap to set up at scaffold time and catches violations
+  before review.
+
+  Since this project never uses barrel files (`aliases-and-barrels.md`), a legitimate
+  cross-module import is always a direct file path one level into another module
+  (`@app/modules/notes/notes.service`, `@app/modules/notes/dto/create-note.dto`,
+  `@app/modules/notes/entities/note.entity`) — a path-depth-based glob like
+  `@app/modules/*/*` would block those too, along with the actually-private internals it's meant
+  to catch. Target the specific subfolders `folder-structure.md`'s file-type table marks
+  feature-private instead (`interfaces/`, `enums/`, `constants/`, `guards/` — never `dto/`,
+  `entities/`, or a module's own top-level files, which are the legitimate public surface):
 
   ```js
   {
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [
-          { group: ['@app/modules/*/*'], message: 'Import from a module\'s public surface (its module/service exports), not its internals.' },
+          {
+            group: [
+              '@app/modules/*/interfaces/*',
+              '@app/modules/*/enums/*',
+              '@app/modules/*/constants/*',
+              '@app/modules/*/guards/*',
+            ],
+            message: 'This subfolder is feature-private — see architecture/folder-structure.md.',
+          },
           { group: ['@nestjs/*'], message: 'common/utilities must stay framework-agnostic.' } // scoped to src/common/utilities/** files only
         ],
       }],
