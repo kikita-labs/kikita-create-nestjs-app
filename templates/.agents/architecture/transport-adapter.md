@@ -71,30 +71,6 @@ async function bootstrap() {
   VersioningType.URI, defaultVersion: '1' })` in `main.ts`. Routes read `/v1/users`, not
   `/users`. Bump the version on a breaking change to a route's contract; do not silently change
   behavior on an existing version.
-- **Route paths**: path segments live in a per-feature enum
-  (`modules/<feature>/enums/<feature>-routes.enum.ts`), never a bare string literal repeated
-  across `@Controller()`/`@Get()`/etc. and any e2e test asserting the same path — one edit point
-  when a path changes, not a grep-and-hope across the codebase.
-
-  ```ts
-  // modules/users/enums/users-routes.enum.ts
-  export enum UsersRoutes {
-    Base = 'users',
-    ReportsBase = 'users/reports',
-    Unresolved = 'unresolved',
-  }
-  ```
-
-  ```ts
-  @Controller({ path: UsersRoutes.Base, version: '1' })
-  export class UsersController {}
-
-  @Controller({ path: UsersRoutes.ReportsBase, version: '1' })
-  export class UserReportsController {
-    @Get(UsersRoutes.Unresolved)
-    findUnresolved() {}
-  }
-  ```
 - **DTOs**: every request body/query/params type is a `class-validator`-decorated DTO class,
   never an inline `interface`/type. `Update*Dto` extends `Create*Dto` via `PartialType`/
   `OmitType`/`PickType` from `@nestjs/swagger` — see `code-style/dto-and-validation.md`.
@@ -179,8 +155,7 @@ so the pattern is discoverable for the next feature instead of re-derived from s
 - [ ] `GET /health/live` and `GET /health/ready` are two separate routes; only `/ready` checks
       Prisma connectivity (and Redis/RabbitMQ if those were chosen).
 - [ ] REST: every route versioned (`/v1/...`), every DTO `class-validator`-decorated, Swagger
-      annotations present, CORS from env allowlist, `ThrottlerGuard` wired, no bare string path
-      literal where a per-feature route enum member should be used instead.
+      annotations present, CORS from env allowlist, `ThrottlerGuard` wired.
 - [ ] Bot: every handler under `updates/`, rate-limited by user/chat id, scenes have a
       cancel/timeout path.
 - [ ] "Both" chosen: REST and bot handlers for the same feature call the identical service
