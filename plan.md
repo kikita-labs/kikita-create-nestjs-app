@@ -11,12 +11,37 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
    generated sample `app.controller.ts`/`app.service.ts`/their `.spec.ts` files — they're
    placeholder noise, not a real feature module.
 
-3. **Wire Prisma + Postgres** (fixed default, no question asked):
-   - `{{PACKAGE_MANAGER}} add @prisma/client` + `-D prisma`, `npx prisma init --datasource-provider postgresql`.
+3. **Wire Prisma + Postgres** (fixed default, no question asked). Prisma's CLI/client API has
+   changed shape across majors more than once — verify the installed major's actual API against
+   its current docs before following this step literally; the specifics below are current for
+   Prisma 7 and will need re-checking again whenever the "latest stable" moves past it:
+   - `{{PACKAGE_MANAGER}} add @prisma/client @prisma/adapter-pg` + `-D prisma dotenv`,
+     `npx prisma init --datasource-provider postgresql`.
+   - `prisma init` generates `prisma.config.ts` at the project root (Prisma 7+) — this file is
+     required for `prisma migrate`/`generate` to run at all, don't delete it thinking it's
+     scaffold noise. It legitimately reads `process.env` directly (needs a
+     `no-restricted-syntax` override, see step 14) and needs the `dotenv` package to load
+     `.env` before Prisma CLI commands run.
+   - **`prisma init` also auto-installs its own agent-skill scaffolding**
+     (`.agents/skills/`, `.windsurf/skills/`, `skills-lock.json`, `.claude/skills/prisma-*`) —
+     this collides with this project's own `.agents/` documentation tree. Detect and delete
+     whatever `prisma init` added under those paths right after running it, before continuing.
+   - **No inline datasource URL** in `schema.prisma`'s `datasource` block (Prisma 7 rejects
+     `url = env("DATABASE_URL")` there with `P1012`) — the connection string is passed to
+     `PrismaClient`'s constructor via a driver adapter instead:
+     `new PrismaClient({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) })`.
+   - In the `generator client` block, set `moduleFormat = "cjs"` explicitly. The current default
+     generator emits ESM (`import.meta.url`), which breaks under Jest/ts-jest's CommonJS
+     runtime — if tests were chosen (step 15), this is not optional. Even with `cjs`, the
+     generated client's own internal imports keep `.js` extensions (NodeNext style) — Jest needs
+     a `moduleNameMapper` entry stripping them
+     (`{ "^(\\.{1,2}/.*)\\.js$": "$1" }`) in both `jest.config` files (unit and e2e) if tests
+     were chosen.
    - Point `DATABASE_URL` at the `docker-compose.yml` Postgres service (step 4).
-   - Add a `PrismaService` under `src/core/prisma/` (extends `PrismaClient`, implements
-     `OnModuleInit`/`OnModuleDestroy`) and a global `PrismaModule` exporting it — see
-     `templates/.agents/core/README.md` for the registry entry to add.
+   - Add a `PrismaService` under `src/core/prisma/` (wraps `PrismaClient` constructed with the
+     driver adapter above, implements `OnModuleInit`/`OnModuleDestroy`) and a global
+     `PrismaModule` exporting it — see `templates/.agents/core/README.md` for the registry entry
+     to add.
    - Add `"postinstall": "prisma generate"` to `package.json` scripts. The generated client
      (`generated/`) is gitignored — without this script, every fresh clone or CI run fails to
      compile on the first `@prisma/client` import until someone remembers to run it by hand.
@@ -32,7 +57,7 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
 5. **Wire validation** (fixed default, no question asked):
    - `{{PACKAGE_MANAGER}} add class-validator class-transformer zod @nestjs/config`.
    - Global `ValidationPipe` in `main.ts`:
-     `{ whitelist: true, forbidNonWhitelisted: true, transform: true }`.
+     `{ whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true, transform: true }`.
    - `ConfigModule.forRoot({ validate })` with a Zod schema validating every env var the
      project actually uses — start with `DATABASE_URL`, `PORT`, `CORS_ORIGIN`, extend per
      feature chosen below.
@@ -63,11 +88,13 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
      `GET /health/ready` (checks Prisma + any chosen Redis/RabbitMQ dependency) — never a single
      merged `GET /health`. See `templates/.agents/core/health.md` for why liveness must never
      depend on an external service. Always generated, not questionnaire-gated.
-   - A global `PrismaExceptionFilter` (`APP_FILTER` provider) under `src/common/filters/`
-     mapping `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002`
+   - A global `PrismaExceptionFilter` under `src/common/filters/` mapping
+     `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002`
      unique-constraint → `ConflictException`, `P2025` record-not-found →
      `NotFoundException`, etc.) — without it, a Prisma constraint violation surfaces as an
-     unhandled 500 instead of the correct 4xx.
+     unhandled 500 instead of the correct 4xx. Registered as an `APP_FILTER` provider in
+     `AppModule` (see `templates/.agents/code-style/module-structure.md`), **not**
+     `app.useGlobalFilters()` in `main.ts`.
    - Error responses use Nest's default `HttpException` JSON shape (`statusCode`, `message`,
      `error`) — no custom envelope wrapper. The Prisma exception filter's whole job is making
      sure Prisma errors end up going through that same shape via a real `HttpException`
@@ -78,7 +105,8 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
    - **REST**: `{{PACKAGE_MANAGER}} add @nestjs/swagger @nestjs/throttler`, enable URI
      versioning (`app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })`),
      configure CORS from `CORS_ORIGIN` env, set up `SwaggerModule` at `/docs`, wire
-     `ThrottlerModule.forRoot()` (IP-keyed default) + a global `ThrottlerGuard`.
+     `ThrottlerModule.forRoot()` (IP-keyed default) plus a `ThrottlerGuard` registered as an
+     `APP_GUARD` provider in `AppModule` — not `app.useGlobalGuards()` in `main.ts`.
    - **Bot**: install the platform library (`nestjs-telegraf` for Telegram, `necord` for
      Discord; for "another platform", install what the user named and hand-adapt the generic
      Update-handler pattern) plus `@nestjs/throttler` if not already added by the REST branch.
@@ -118,20 +146,44 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     example `@MessagePattern`/`@EventPattern` handler.
 
 14. **Set up tooling**:
-    - Copy `templates/.gitignore`, `templates/.editorconfig`, `templates/.prettierrc`,
-      `templates/.prettierignore`, `templates/.vscode/extensions.json`, `templates/.env.example`
-      into the project as-is (env-example gated blocks stripped per the questionnaire answers).
+    - Copy `templates/.gitignore`, `templates/.gitattributes`, `templates/.editorconfig`,
+      `templates/.prettierrc`, `templates/.prettierignore`, `templates/.vscode/extensions.json`,
+      `templates/.env.example` into the project as-is (env-example gated blocks stripped per the
+      questionnaire answers).
     - Copy `templates/.nvmrc`, replacing `{{NODE_VERSION}}` with the Node version the chosen
       Nest release actually requires — check, don't guess.
+    - **If `{{PACKAGE_MANAGER}}` is pnpm**: current pnpm versions silently skip `postinstall`
+      scripts for dependencies with native builds (`argon2` if auth was chosen, `@prisma/engines`
+      transitively, and others) unless explicitly approved. Either run
+      `pnpm approve-builds --all` once during scaffolding, or add an `onlyBuiltDependencies` list
+      to **`pnpm-workspace.yaml`** at the project root (not `package.json`'s `pnpm` field — pnpm
+      stopped reading that location). Skipping this step produces packages that silently don't
+      work (`argon2` falls back to a pure-JS shim or errors at runtime) with no install-time
+      error pointing at the cause.
+    - **Wire `@app/*` path aliases** end to end — `architecture/aliases-and-barrels.md` declares
+      them mandatory, so this subsystem has to actually exist, not just be assumed:
+      - `tsconfig.json` `compilerOptions.paths`: `"@app/*": ["src/*"]`.
+      - TypeScript's `paths` is a type-checking-only feature — it does not rewrite import paths
+        in compiled output. Add `tsc-alias` as a dev dependency and run it right after `tsc` in
+        the `build` script (`tsc && tsc-alias`), so compiled `dist/` output has real relative
+        paths instead of unresolved `@app/...` imports.
+      - Add a matching `moduleNameMapper` entry (`"^@app/(.*)$": "<rootDir>/src/$1"`) to **every**
+        Jest config that exists — unit and e2e are commonly separate config files/projects in a
+        Nest scaffold, both need the mapping independently, not just one.
     - ESLint flat config: `@darraghor/eslint-plugin-nestjs-typed` recommended +
       `typescript-eslint` `strict-type-checked` + `eslint-plugin-simple-import-sort` +
-      `@typescript-eslint/consistent-type-imports` + a restricted-import boundary rule, with
-      `eslint-config-prettier` last. `ignores` covers `dist/`, `node_modules/`, `coverage/`,
-      `generated/` (Prisma client output), lockfiles. See
-      `templates/.agents/testing-and-quality.md`'s "Mechanically Enforced Rules" section for
-      the exact `no-restricted-imports`/`no-restricted-syntax` blocks this config must include
-      — several `AGENTS.md` rules (no `@nestjs/mapped-types`, no `bcrypt`, no direct
-      `process.env`) are only real if this config actually has them, not just documented prose.
+      `@typescript-eslint/consistent-type-imports` + the restricted-import boundary patterns
+      from `templates/.agents/architecture/README.md`'s "Automated boundary checks" section
+      (these two docs describe the same config from different angles — both sets of rules go
+      into the one file, not just whichever was read most recently), with `eslint-config-prettier`
+      last. `ignores` covers `dist/`, `node_modules/`, `coverage/`, `generated/` (Prisma client
+      output), lockfiles. See `templates/.agents/testing-and-quality.md`'s "Mechanically Enforced
+      Rules" section for the exact `no-restricted-imports`/`no-restricted-syntax` blocks this
+      config must include — several `AGENTS.md` rules (no `@nestjs/mapped-types`, no `bcrypt`, no
+      direct `process.env`) are only real if this config actually has them, not just documented
+      prose. Also see that same section for two rules from
+      `@darraghor/eslint-plugin-nestjs-typed`'s recommended set that need an override at
+      scaffold time, not after they cause friction.
     - Wire `lint` / `format` / `format:check` scripts using `{{PACKAGE_MANAGER}}`.
     - Install and configure Husky + `lint-staged`, `"prepare": "husky"` in `package.json`:
       `pre-commit` runs `lint-staged` + the non-English content check; `pre-push` runs the full

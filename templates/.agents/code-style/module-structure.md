@@ -31,10 +31,30 @@ down, not flattened into the parent module's provider list.
 
 ## `AppModule`
 
-The root module only imports — it declares no providers/controllers of its own beyond what
+The root module has no feature `controllers`/business `providers` of its own beyond what
 `nest new` scaffolds (and those get deleted per `plan.md` step 2). Its `imports` array lists
-`core/` modules first (Prisma, logger, and any of auth/queue/cache/storage that were chosen),
-then every `modules/*` feature module, then the bot module if chosen.
+`core/` modules first (Prisma, health, logger, and any of auth/queue/cache/storage that were
+chosen), then every `modules/*` feature module, then the bot module if chosen.
+
+**One explicit exception**: the global cross-cutting providers wired via Nest's `APP_FILTER`/
+`APP_GUARD`/`APP_INTERCEPTOR`/`APP_PIPE` injection tokens (`PrismaExceptionFilter`, the
+`ThrottlerGuard` if REST/bot was chosen) *do* belong in `AppModule`'s `providers` array — that's
+the only mechanism Nest offers for registering something globally through DI (as opposed to
+`app.useGlobalFilters()` et al. in `main.ts`, which can't inject other providers). This is not a
+violation of "root module only imports" so much as the one legitimate class of provider that
+belongs at the root by construction. Don't extend this exception to anything else — a
+feature-specific provider never ends up in `AppModule` just because it's convenient.
+
+```ts
+@Module({
+  imports: [PrismaModule, HealthModule, UsersModule /* ... */],
+  providers: [
+    { provide: APP_FILTER, useClass: PrismaExceptionFilter },
+    { provide: APP_GUARD, useClass: ThrottlerGuard }, // only if REST or bot was chosen
+  ],
+})
+export class AppModule {}
+```
 
 ## Review Checklist
 

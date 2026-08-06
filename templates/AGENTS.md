@@ -47,8 +47,9 @@ strategy), also read:
   rule set when the project's `eslint.config.js` is authored); treat as a review-blocking rule
   until/unless it is.
 - Every DTO uses `class-validator`/`class-transformer` decorators. The global `ValidationPipe`
-  (`whitelist`, `forbidNonWhitelisted`, `transform` all `true`) is wired in `main.ts` and must
-  stay that way — never disable it per-route to "make validation easier". A nested-object/
+  (`whitelist`, `forbidNonWhitelisted`, `forbidUnknownValues`, `transform` all `true`) is wired
+  in `main.ts` and must stay that way — never disable it per-route to "make validation easier".
+  A nested-object/
   array-of-objects field needs both `@ValidateNested()` and `@Type(() => NestedDto)` — missing
   `@Type()` makes validation silently skip the nested value. See
   `.agents/code-style/dto-and-validation.md`.
@@ -58,9 +59,15 @@ strategy), also read:
 - Env/config values are validated by the Zod schema in `ConfigModule.forRoot({ validate })` —
   never read `process.env` directly in application code outside that schema file.
   ESLint-blocked (`no-restricted-syntax`, see `.agents/testing-and-quality.md`).
-- Responses never leak a raw Prisma entity — return a DTO with `@Exclude()` on sensitive fields
-  and rely on the global `ClassSerializerInterceptor` wired in `main.ts`. No competing
-  serialization approach without an ADR. See `.agents/code-style/dto-and-validation.md`.
+- Responses never leak a raw Prisma entity — return a DTO with `@Exclude()`/`@Expose()` on
+  sensitive fields, **actually instantiated via
+  `plainToInstance(..., { excludeExtraneousValues: true })`**, relying on the global
+  `ClassSerializerInterceptor` wired in `main.ts` to strip it. A method whose return type merely
+  claims the DTO type without
+  an actual `plainToInstance` call does not get the exclusion — the interceptor only strips
+  fields off real class instances, not plain objects with a matching TypeScript annotation. No
+  competing serialization approach without an ADR. See
+  `.agents/code-style/dto-and-validation.md`.
 - Prisma is the only ORM; Postgres is the only database. Do not add a second ORM or database
   driver without an ADR (`.agents/decisions/README.md`).
 - Path aliases are mandatory for cross-module imports. See

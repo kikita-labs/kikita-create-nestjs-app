@@ -52,6 +52,11 @@ commit/push can't land even if the agent forgets to run checks manually.
   track the executable bit (e.g. some Windows setups) can leave the hook non-executable
   even though `chmod +x` "worked" locally. Verify/fix with:
   `git update-index --chmod=+x .husky/pre-commit .husky/pre-push`.
+- Add `.husky/* text eol=lf` to a `.gitattributes` at the project root. Husky hook scripts run
+  under `sh -e`; a hook checked out with CRLF line endings (the Windows git default without this
+  file) fails inside `sh` with a confusing error that looks unrelated to line endings, not an
+  obvious "wrong line ending" message. This is a separate failure mode from the executable-bit
+  issue above — both need fixing, neither one covers the other.
 
 ## Commit & push authority
 

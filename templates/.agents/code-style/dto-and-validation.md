@@ -3,9 +3,9 @@
 Two validation tools, two different jobs — never blur the line:
 
 - **`class-validator` + `class-transformer`** — the HTTP/bot input layer. Every DTO class is
-  decorated, and the global `ValidationPipe` (`whitelist: true, forbidNonWhitelisted: true,
-  transform: true`) does the enforcement. Never write a manual `if (!dto.email) throw ...` check
-  that duplicates what a decorator already does.
+  decorated, and the global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`,
+  `forbidUnknownValues`, `transform` all `true`) does the enforcement. Never write a manual
+  `if (!dto.email) throw ...` check that duplicates what a decorator already does.
 - **Zod** — env/config validation only, via `ConfigModule.forRoot({ validate })`. Env var errors
   surface at boot ("`DATABASE_URL`: Expected string, received undefined") instead of failing
   confusingly on first use in production.
@@ -22,9 +22,9 @@ export class CreateUserDto {
 ```
 
 ```ts
-// config/env.schema.ts
+// core/config/env.schema.ts — the one file allowed to read process.env directly
 export const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.url(), // z.string().url() is deprecated as of zod 4 — use the top-level z.url()
   PORT: z.coerce.number().default(3000),
   CORS_ORIGIN: z.string(),
 });
@@ -107,10 +107,37 @@ export class UserResponseDto {
 app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 ```
 
-A service method can still return the Prisma entity directly to the controller — the
-interceptor only serializes what actually leaves the transport boundary — but the type the
-controller method's return type claims must be the DTO, not the Prisma model, so the exclusion
-is enforced by the type system too, not only by the interceptor at runtime.
+**This is the part that's easy to get silently wrong**: `ClassSerializerInterceptor` only strips
+`@Exclude()` fields off an actual **instance of the class**. It does nothing for a plain object
+that merely has a TypeScript return type annotation claiming to be that class — TypeScript types
+don't exist at runtime, so `@Exclude()` never runs, and the field goes out over the wire intact.
+This controller compiles cleanly, passes review at a glance, and leaks the password hash on every
+request:
+
+```ts
+// WRONG — compiles, "looks" correct, leaks passwordHash: the return value is a plain Prisma
+// object, never actually instantiated as UserResponseDto, so @Exclude() has nothing to strip.
+async findOne(id: string): Promise<UserResponseDto> {
+  return this.usersService.findOne(id); // returns the raw Prisma User row
+}
+```
+
+The controller (or service, at the boundary where the DTO is returned) must explicitly convert
+the plain object into a real instance with `plainToInstance` before returning it:
+
+```ts
+// CORRECT
+async findOne(id: string): Promise<UserResponseDto> {
+  const user = await this.usersService.findOne(id);
+  return plainToInstance(UserResponseDto, user, { excludeExtraneousValues: true });
+}
+```
+
+`excludeExtraneousValues: true` also means every field meant to survive needs `@Expose()` (or a
+consistent project-wide choice of exclude-by-default vs expose-by-default — pick one and follow
+it in every DTO, don't mix). A test asserting the sensitive field is actually absent from a real
+serialized response (not just present-with-`@Exclude()`-in-the-source) is what catches a
+regression here — see `../testing-and-quality.md`.
 
 ## Review Checklist
 
@@ -121,4 +148,9 @@ is enforced by the type system too, not only by the interceptor at runtime.
       `@nestjs/swagger`, not `@nestjs/mapped-types`.
 - [ ] No env var read directly from `process.env` outside the Zod-validated config module.
 - [ ] No raw Prisma entity returned directly from a controller/update handler — a DTO with
-      `@Exclude()` on sensitive fields, relying on the global `ClassSerializerInterceptor`.
+      `@Exclude()`/`@Expose()` fields, actually instantiated via `plainToInstance(...,
+      { excludeExtraneousValues: true })`, not just type-annotated as the DTO. A return type
+      claiming `UserResponseDto` with no `plainToInstance` call anywhere in the method is the
+      bug this checklist item exists to catch.
+- [ ] At least one test asserts a sensitive field is actually absent from a real serialized
+      response for every DTO that has an `@Exclude()`d field.

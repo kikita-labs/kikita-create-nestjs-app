@@ -75,8 +75,9 @@ Fixed defaults — **never** ask about these, they're locked by design:
 - **ORM/DB**: Prisma + Postgres. No TypeORM (not recommended for new projects), no Drizzle (niche
   perf/edge pick), no NoSQL/MongoDB branch in v1 of this skill.
 - **Validation**: `class-validator` + `class-transformer` on the HTTP layer, global
-  `ValidationPipe` (`whitelist: true, forbidNonWhitelisted: true, transform: true`) wired in
-  `main.ts` unconditionally. Zod for env/config validation (`@nestjs/config` + `validate`),
+  `ValidationPipe` wired in `main.ts` unconditionally with `whitelist`, `forbidNonWhitelisted`,
+  `forbidUnknownValues`, and `transform` all `true`. Zod for env/config validation
+  (`@nestjs/config` + `validate`),
   enforced by an ESLint rule blocking direct `process.env` reads outside the schema file — see
   `testing-and-quality.md`'s "Mechanically Enforced Rules". Nested DTO fields require both
   `@ValidateNested()` and `@Type(() => NestedDto)` — see `code-style/dto-and-validation.md`.
@@ -109,7 +110,7 @@ Fixed defaults — **never** ask about these, they're locked by design:
 ## 2. Generate
 
 Follow `plan.md`. Copy files from `templates/` into the target project, including the dotfiles
-(`.gitignore`, `.editorconfig`, `.prettierrc`, `.prettierignore`, `.nvmrc`,
+(`.gitignore`, `.gitattributes`, `.editorconfig`, `.prettierrc`, `.prettierignore`, `.nvmrc`,
 `.vscode/extensions.json`, `.env.example`, `docker-compose.yml`).
 
 Two different things happen with questionnaire answers, don't conflate them:

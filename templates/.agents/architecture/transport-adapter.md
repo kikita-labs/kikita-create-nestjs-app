@@ -29,9 +29,12 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger)); // nestjs-pino
   app.enableShutdownHooks(); // without this, OnModuleDestroy (PrismaService) never fires on SIGTERM
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true, transform: true }),
+  );
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.useGlobalFilters(new PrismaExceptionFilter());
+  // PrismaExceptionFilter (and ThrottlerGuard, if REST/bot) are NOT registered here — they're
+  // DI-managed APP_FILTER/APP_GUARD providers in AppModule instead, see code-style/module-structure.md
   // REST-only: app.enableVersioning(...), app.enableCors(...), SwaggerModule.setup(...)
   // Auth-only: app.use(cookieParser()), then doubleCsrfProtection scoped to /v1/auth/refresh
   //   — see core/auth.md's Wiring section for why cookieParser() must come before any guard.
@@ -52,7 +55,9 @@ async function bootstrap() {
   actually hits). Without it a constraint violation surfaces as an unhandled 500. Error
   responses use Nest's default `HttpException` JSON shape — no custom envelope; the filter's
   job is making Prisma errors go through a real `HttpException` subclass so they follow that
-  same shape instead of a generic 500.
+  same shape instead of a generic 500. Registered as an `APP_FILTER` provider in `AppModule`
+  (not `app.useGlobalFilters()` in `main.ts`) — see `code-style/module-structure.md`'s
+  `AppModule` section for why global filters/guards go through DI instead.
 - **`GET /health/live` + `GET /health/ready`** (`@nestjs/terminus`) — always wired, not gated by
   the questionnaire, always two separate routes, never merged. Liveness checks nothing external;
   readiness checks Prisma plus every external dependency actually chosen (Redis if
@@ -81,6 +86,8 @@ async function bootstrap() {
   every route that should require auth must say so explicitly with `@UseGuards(JwtAuthGuard)`.
 - **Rate limiting**: `@nestjs/throttler`, keyed by IP by default (the standard case for a public
   REST API — a bot's per-user throttling below is a different key, don't conflate the two).
+  Registered globally as an `APP_GUARD` provider in `AppModule`, same reasoning as
+  `PrismaExceptionFilter` above — not `app.useGlobalGuards()` in `main.ts`.
 
 <!-- SCAFFOLD: keep this section only if bot or both was chosen -->
 ## Bot
@@ -142,8 +149,9 @@ so the pattern is discoverable for the next feature instead of re-derived from s
 ## Review Checklist
 
 - [ ] No business logic inline in a controller/update handler — one call into `modules/*`.
-- [ ] `main.ts` has `enableShutdownHooks()`, the global `ClassSerializerInterceptor`, and the
-      global `PrismaExceptionFilter` — not just the `ValidationPipe`.
+- [ ] `main.ts` has `enableShutdownHooks()` and the global `ClassSerializerInterceptor`; the
+      global `PrismaExceptionFilter`/`ThrottlerGuard` are `APP_FILTER`/`APP_GUARD` providers in
+      `AppModule`, not also (or instead) wired in `main.ts`.
 - [ ] `GET /health/live` and `GET /health/ready` are two separate routes; only `/ready` checks
       Prisma connectivity (and Redis/RabbitMQ if those were chosen).
 - [ ] REST: every route versioned (`/v1/...`), every DTO `class-validator`-decorated, Swagger

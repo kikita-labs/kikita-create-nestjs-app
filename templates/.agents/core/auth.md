@@ -20,6 +20,15 @@ non-rotating JWT, or an alternate strategy without an ADR (`../decisions/README.
   current valid refresh token per session in the `RefreshToken` Prisma model. A refresh request
   presenting an already-used/invalidated token is treated as a compromised session — revoke the
   whole session's chain, not just reject the one request.
+- **Identifying whose refresh token it is**: the refresh token itself is a signed JWT carrying
+  `sub` (user id) and a session/token id, same as the access token but with the longer TTL and
+  refresh-specific secret. On `/auth/refresh`: (1) verify the JWT signature and expiry first —
+  a forged or expired token is rejected before touching the database at all; (2) only then look
+  up the `RefreshToken` row for that session/token id and compare its stored hash against the
+  presented token. Signature verification and the DB hash check are both required, in that
+  order — signature-only would accept a stale/rotated-out token that just happens to still be
+  well-formed and unexpired; hash-only (looking the row up without verifying the JWT first)
+  means every refresh does a DB round-trip even for garbage input, an easy DoS surface.
 - **CSRF**: `csrf-csrf` (not `csurf` — deprecated, unmaintained) protecting the `/auth/refresh`
   route and any other cookie-authenticated mutation. Not needed on routes that only accept the
   Bearer access token, since those aren't cookie-driven and browsers don't auto-attach a header.
@@ -42,6 +51,12 @@ app.use('/v1/auth/refresh', doubleCsrfProtection);
   (`@UseGuards(JwtAuthGuard)`), applied per-route/controller — a route with no guard is public by
   default, so protect explicitly. `RolesGuard` + `@Roles('admin')` for role-gated routes, checked
   after `JwtAuthGuard` in the guard chain.
+
+**Typing gotcha**: `@nestjs/jwt`'s `expiresIn` option is typed as `number | StringValue` (the
+`ms` package's string-literal union — `'15m'`, `'30d'`, etc.), not a plain `string`. A value read
+via `configService.getOrThrow<string>('JWT_ACCESS_TTL')` is a bare `string` and needs an explicit
+cast to satisfy that type: `expiresIn: configService.getOrThrow<string>('JWT_ACCESS_TTL') as
+SignOptions['expiresIn']`. Don't widen the type with `any` to make the error go away.
 
 ```ts
 @Controller({ path: 'auth', version: '1' })

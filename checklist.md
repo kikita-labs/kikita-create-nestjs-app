@@ -25,8 +25,8 @@ genuinely true — do not check a box you didn't verify.
 
 ## Validation, logging, transport
 
-- [ ] Global `ValidationPipe` in `main.ts` with `whitelist`, `forbidNonWhitelisted`, `transform`
-      all `true`.
+- [ ] Global `ValidationPipe` in `main.ts` with `whitelist`, `forbidNonWhitelisted`,
+      `forbidUnknownValues`, `transform` all `true`.
 - [ ] `ConfigModule` validates env vars via a Zod schema — startup fails loudly on a missing var,
       not silently on first use.
 - [ ] Every DTO field that's a nested object/array of objects has both `@ValidateNested()` and
@@ -34,9 +34,11 @@ genuinely true — do not check a box you didn't verify.
       the request is actually rejected, not silently accepted.
 - [ ] `nestjs-pino` wired; app boot logs are structured JSON, not the default Nest logger output.
 - [ ] `main.ts` calls `app.enableShutdownHooks()`.
-- [ ] Global `ClassSerializerInterceptor` wired in `main.ts`; a DTO with an `@Exclude()` field
-      (e.g. a password hash) actually comes back stripped in a real response, not just present
-      in the interceptor registration.
+- [ ] Global `ClassSerializerInterceptor` wired in `main.ts`; every controller/update-handler
+      method returning a DTO with an `@Exclude()` field actually calls `plainToInstance()` on it
+      (grep for the DTO's usages, not just the interceptor registration); a real response for
+      that endpoint comes back with the field genuinely stripped, verified by a test — not
+      assumed from the DTO's decorators alone.
 - [ ] Global `PrismaExceptionFilter` wired as `APP_FILTER`; triggering a unique-constraint
       violation returns a `409`, not an unhandled `500`.
 - [ ] `GET /health/live` responds `200` and checks nothing external (verify it stays `200` even
@@ -74,6 +76,9 @@ genuinely true — do not check a box you didn't verify.
 - [ ] `.gitignore` covers `node_modules`, `dist`, `coverage`, `generated/` (Prisma client
       output), env files, lockfiles of the *other* package managers, `.claude/`, `.codex/`.
 - [ ] `.editorconfig`, `.prettierrc`, `.prettierignore`, `.vscode/extensions.json` present.
+- [ ] `.gitattributes` present with `.husky/* text eol=lf`; `pnpm approve-builds`/
+      `onlyBuiltDependencies` handled if pnpm was chosen (native deps like `argon2` actually
+      work, not silently skipped).
 - [ ] `.nvmrc` present with the real Node version, not the `{{NODE_VERSION}}` placeholder.
 - [ ] ESLint flat config present (`@darraghor/eslint-plugin-nestjs-typed` recommended +
       `typescript-eslint` `strict-type-checked` + `simple-import-sort` +

@@ -52,22 +52,31 @@ export class HealthController {
 
 ## Indicators
 
+`@nestjs/terminus` has no built-in Prisma indicator (its bundled indicators target TypeORM/
+Mongoose/HTTP/disk/memory) — Prisma always needs a custom one. Write it against
+`HealthIndicatorService`, not the older `HealthIndicator` base class + `HealthCheckError`
+pattern — that pair is deprecated in current Terminus major versions; verify which API the
+installed version actually expects before copying this literally, the same caveat as Prisma's
+own churn (see `plan.md` step 3).
+
 One `*.health-indicator.ts` per external dependency, under `core/health/indicators/`:
 
 ```ts
 // core/health/indicators/prisma.health-indicator.ts
 @Injectable()
-export class PrismaHealthIndicator extends HealthIndicator {
-  constructor(private readonly prisma: PrismaService) {
-    super();
-  }
+export class PrismaHealthIndicator {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly healthIndicatorService: HealthIndicatorService,
+  ) {}
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
+    const indicator = this.healthIndicatorService.check(key);
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return this.getStatus(key, true);
-    } catch (error) {
-      throw new HealthCheckError('Prisma check failed', this.getStatus(key, false));
+      return indicator.up();
+    } catch {
+      return indicator.down({ message: 'Prisma check failed' });
     }
   }
 }

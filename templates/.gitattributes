@@ -1,0 +1,4 @@
+# Husky hook scripts run under `sh -e` — a CRLF line ending (the Windows git checkout default
+# without this file) makes the script fail inside sh with a confusing error unrelated to line
+# endings. See .agents/git-policy.md.
+.husky/* text eol=lf
