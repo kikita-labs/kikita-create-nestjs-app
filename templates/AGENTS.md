@@ -77,10 +77,13 @@ strategy), also read:
   `.agents/code-style/dto-and-validation.md`.
 - Prisma is the only ORM; Postgres is the only database. Do not add a second ORM or database
   driver without an ADR (`.agents/decisions/README.md`).
-- Path aliases are mandatory for cross-module imports. See
+- Path aliases (`@app/*`, `@generated/*`) are mandatory for cross-module imports. See
   `.agents/architecture/aliases-and-barrels.md`. A feature module never imports another
   feature's internals directly — only its exported public surface. See
   `.agents/architecture/module-boundaries.md`.
+- No barrel `index.ts` files anywhere in `src/` — every import names the exact declaring file.
+  Nest's own docs call barrels a same-directory circular-dependency trap; see
+  `.agents/architecture/aliases-and-barrels.md`.
 - CORS is always restricted to the `CORS_ORIGIN` env allowlist — never `*`.
 - API routes are versioned (`/v1/...`) via Nest URI Versioning — see
   `.agents/architecture/transport-adapter.md`.

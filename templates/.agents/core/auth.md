@@ -42,7 +42,9 @@ non-rotating JWT, or an alternate strategy without an ADR (`../decisions/README.
 ```ts
 // main.ts, only if auth was chosen — added alongside the rest of Bootstrap wiring
 app.use(cookieParser());
-const { doubleCsrfProtection } = doubleCsrf({ getSecret: () => process.env.CSRF_SECRET! });
+const { doubleCsrfProtection } = doubleCsrf({
+  getSecret: () => configService.getOrThrow<string>('CSRF_SECRET'),
+});
 app.use('/v1/auth/refresh', doubleCsrfProtection);
 ```
 - **Password hashing**: `argon2id` (via the `argon2` package), not `bcrypt` — current best

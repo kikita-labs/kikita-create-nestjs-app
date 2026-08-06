@@ -173,16 +173,20 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
       stopped reading that location). Skipping this step produces packages that silently don't
       work (`argon2` falls back to a pure-JS shim or errors at runtime) with no install-time
       error pointing at the cause.
-    - **Wire `@app/*` path aliases** end to end — `architecture/aliases-and-barrels.md` declares
-      them mandatory, so this subsystem has to actually exist, not just be assumed:
-      - `tsconfig.json` `compilerOptions.paths`: `"@app/*": ["src/*"]`.
+    - **Wire `@app/*` and `@generated/*` path aliases** end to end —
+      `architecture/aliases-and-barrels.md` declares them mandatory, so this subsystem has to
+      actually exist, not just be assumed:
+      - `tsconfig.json` `compilerOptions.paths`: `"@app/*": ["src/*"]` and
+        `"@generated/*": ["generated/*"]` (the Prisma client output lives outside `src/`, so it
+        needs its own mapping — see `aliases-and-barrels.md`).
       - TypeScript's `paths` is a type-checking-only feature — it does not rewrite import paths
         in compiled output. Add `tsc-alias` as a dev dependency and run it right after `tsc` in
         the `build` script (`tsc && tsc-alias`), so compiled `dist/` output has real relative
-        paths instead of unresolved `@app/...` imports.
-      - Add a matching `moduleNameMapper` entry (`"^@app/(.*)$": "<rootDir>/src/$1"`) to **every**
-        Jest config that exists — unit and e2e are commonly separate config files/projects in a
-        Nest scaffold, both need the mapping independently, not just one.
+        paths instead of unresolved `@app/...`/`@generated/...` imports.
+      - Add matching `moduleNameMapper` entries
+        (`"^@app/(.*)$": "<rootDir>/src/$1"`, `"^@generated/(.*)$": "<rootDir>/generated/$1"`) to
+        **every** Jest config that exists — unit and e2e are commonly separate config files/
+        projects in a Nest scaffold, both need the mapping independently, not just one.
     - ESLint flat config: `@darraghor/eslint-plugin-nestjs-typed` recommended +
       `typescript-eslint` `strict-type-checked` + `eslint-plugin-simple-import-sort` +
       `@typescript-eslint/consistent-type-imports` + the restricted-import boundary patterns
@@ -194,9 +198,8 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
       Rules" section for the exact `no-restricted-imports`/`no-restricted-syntax` blocks this
       config must include — several `AGENTS.md` rules (no `@nestjs/mapped-types`, no `bcrypt`, no
       direct `process.env`) are only real if this config actually has them, not just documented
-      prose. Also see that same section for two rules from
-      `@darraghor/eslint-plugin-nestjs-typed`'s recommended set that need an override at
-      scaffold time, not after they cause friction.
+      prose. Also see that same section for rules from `@darraghor/eslint-plugin-nestjs-typed`'s
+      recommended set that need an override at scaffold time, not after they cause friction.
     - Wire `lint` / `format` / `format:check` scripts using `{{PACKAGE_MANAGER}}`.
     - Install and configure Husky + `lint-staged`, `"prepare": "husky"` in `package.json`:
       `pre-commit` runs `lint-staged` + the non-English content check; `pre-push` runs the full
@@ -204,8 +207,8 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
       `kikita-create-angular-app` — see `templates/.agents/git-policy.md` and
       `templates/.agents/testing-and-quality.md`.
     - `git update-index --chmod=+x .husky/pre-commit .husky/pre-push` after writing the hooks.
-    - Create the skeleton folders `src/core/`, `src/common/`, `src/modules/` (each with a
-      barrel `index.ts` where it holds more than one file).
+    - Create the skeleton folders `src/core/`, `src/common/`, `src/modules/`. No barrel
+      `index.ts` in any of them — see `architecture/aliases-and-barrels.md`.
 
 16. **If tests were chosen**, wire Jest (already ships with `nest new`) for unit and/or
     Supertest for e2e per the answer; if "both", also add Testcontainers

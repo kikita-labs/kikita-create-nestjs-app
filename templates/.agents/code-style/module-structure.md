@@ -155,20 +155,25 @@ export class LoggerModule {}
 ```
 
 **One explicit exception**: the global cross-cutting providers wired via Nest's `APP_FILTER`/
-`APP_GUARD`/`APP_INTERCEPTOR`/`APP_PIPE` injection tokens (`PrismaExceptionFilter`, the
-`ThrottlerGuard` if REST/bot was chosen) *do* belong in `AppModule`'s `providers` array — that's
-the only mechanism Nest offers for registering something globally through DI (as opposed to
-`app.useGlobalFilters()` et al. in `main.ts`, which can't inject other providers). This is not a
-violation of "root module only imports" so much as the one legitimate class of provider that
-belongs at the root by construction. Don't extend this exception to anything else — a
-feature-specific provider never ends up in `AppModule` just because it's convenient.
+`APP_GUARD`/`APP_INTERCEPTOR`/`APP_PIPE` injection tokens (`PrismaExceptionFilter` always; the
+default `ThrottlerGuard` **only if REST was chosen**) *do* belong in `AppModule`'s `providers`
+array — that's the only mechanism Nest offers for registering something globally through DI (as
+opposed to `app.useGlobalFilters()` et al. in `main.ts`, which can't inject other providers).
+This is not a violation of "root module only imports" so much as the one legitimate class of
+provider that belongs at the root by construction. Don't extend this exception to anything
+else — a feature-specific provider never ends up in `AppModule` just because it's convenient.
+
+`BotThrottlerGuard` is **not** part of this exception — it's applied per-update-handler-class via
+`@UseGuards()`, not globally, even in a bot-only app with no REST branch at all. See
+`../architecture/transport-adapter.md`'s "Rate limiting" bullet under Bot for why one global
+guard can't serve both an HTTP req/res pair and a bot update's context shape.
 
 ```ts
 @Module({
   imports: [PrismaModule, HealthModule, UsersModule /* ... */],
   providers: [
     { provide: APP_FILTER, useClass: PrismaExceptionFilter },
-    { provide: APP_GUARD, useClass: ThrottlerGuard }, // only if REST or bot was chosen
+    { provide: APP_GUARD, useClass: ThrottlerGuard }, // only if REST was chosen
   ],
 })
 export class AppModule {}

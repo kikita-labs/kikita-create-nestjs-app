@@ -1,6 +1,9 @@
-# Aliases & Barrels
+# Path Aliases
 
-## Path aliases
+No barrel files (`index.ts` re-export hubs) anywhere in this project — see "No barrels" below
+for why. Every import names the exact file the symbol comes from.
+
+## `@app/*`
 
 `tsconfig.json` `paths` maps `@app/*` to `src/*`. Any import crossing a module boundary
 (`modules/users` importing something from `common/` or `core/`) uses the alias, never a relative
@@ -16,23 +19,72 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 
 A relative import (`./`, `../`) is fine only for files inside the same module folder.
 
-## Barrels
+## `@generated/*`
 
-Nest modules already give a natural encapsulation boundary — a feature's `*.module.ts` declares
-exactly what it exports via the `exports` array (see `module-boundaries.md`), so barrels here are
-lighter-weight than in a frontend app: not every folder needs an `index.ts`.
+Prisma's generated client (`prisma/schema.prisma`'s `generator client { output = "../generated/
+prisma" }`, per `core/README.md`'s Prisma entry) lives at `<repo root>/generated/`, **outside**
+`src/` — `@app/*` doesn't reach it, since that alias only covers `src/*`. Without a second alias,
+every file that imports the generated client (`PrismaService`, any file importing a Prisma-
+generated enum) ends up with a `../../../generated/prisma/client`-style path whose depth changes
+every time the importing file moves. Add a second `tsconfig.json` `paths` entry:
 
-- Add a barrel `index.ts` to a `modules/<feature>/` folder once it has more than the module/
-  controller/service triplet (e.g. it grows a `dto/` folder with several DTOs another module is
-  allowed to import — export the DTOs meant for reuse through the barrel, not the internals).
-- `common/` and `core/` subfolders (`pipes/`, `filters/`, `core/queue/`, etc.) get a barrel as
-  soon as they hold more than one file, since those are imported from many places across the app.
-- Never barrel-export something not meant to be imported from outside the folder — a barrel is a
-  public-surface declaration, not a convenience re-export of everything.
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@app/*": ["src/*"],
+      "@generated/*": ["generated/*"]
+    }
+  }
+}
+```
+
+```ts
+// Good
+import { PrismaClient } from '@generated/prisma/client';
+import { Role } from '@generated/prisma/enums';
+
+// Bad
+import { PrismaClient } from '../../../generated/prisma/client';
+```
+
+`tsc-alias` (see `plan.md`'s tooling step) and every Jest `moduleNameMapper` need this second
+mapping alongside `@app/*` — the same subsystem, one more entry, not a separate one to remember.
+
+## No barrels
+
+Never create an `index.ts` that only re-exports other files in the same folder, and never import
+through one. Two separate, both real, reasons — not just a style preference:
+
+- **NestJS's own docs call this out as a circular-dependency trap specifically for imports within
+  the same directory as the barrel**: a file inside `modules/users/` importing another file in
+  that same folder through `modules/users/index.ts` (instead of the direct relative path) creates
+  a dependency cycle through the barrel that isn't obvious from either file's own contents. Nest's
+  circular-dependency docs name this exact pattern as a common, easy-to-miss cause.
+- **Barrels defeat tree-shaking and slow down tooling that isn't bundler-aware**: TypeScript does
+  not tree-shake a barrel import at compile time, so importing one named export from an `index.ts`
+  can pull in every module that barrel re-exports (transitively, including their own imports).
+  Jest in particular resolves and evaluates the whole barrel chain to satisfy one import — an
+  otherwise-fast, narrowly-scoped test file can end up loading half the app's dependency graph.
+
+Nest modules already give a real encapsulation boundary without needing a barrel for it — a
+feature's `*.module.ts` declares exactly what it exports via the `exports` array (see
+`module-boundaries.md`). That's the project's actual public-surface mechanism; an `index.ts`
+re-export was never required for it to work.
+
+```ts
+// Good — direct import from the declaring file
+import { UsersService } from '@app/modules/users/users.service';
+
+// Bad — even if modules/users/index.ts only re-exports "public" things, this is a barrel import
+import { UsersService } from '@app/modules/users';
+```
 
 ## Review Checklist
 
-- [ ] No `../../../`-style deep relative imports crossing a module boundary — the alias was
-      used instead.
-- [ ] Every `common/`/`core/` subfolder with 2+ files has a barrel.
-- [ ] Barrel exports match what's actually meant to be public — no accidental internal leak.
+- [ ] No `../../../`-style deep relative imports crossing a module boundary — `@app/*` or
+      `@generated/*` used instead.
+- [ ] No `index.ts` barrel file anywhere under `src/` — every import names the exact declaring
+      file.
+- [ ] `@generated/*` present in `tsconfig.json` `paths`, `tsc-alias`, and every Jest
+      `moduleNameMapper` alongside `@app/*`.

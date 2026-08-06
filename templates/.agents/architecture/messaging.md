@@ -11,16 +11,17 @@ into multiple services/repos (that's explicitly out of scope, same as a monorepo
 
 ```ts
 const app = await NestFactory.create(AppModule);
+const configService = app.get(ConfigService);
 app.connectMicroservice<MicroserviceOptions>({
   transport: Transport.RMQ,
   options: {
-    urls: [process.env.RABBITMQ_URL],
+    urls: [configService.getOrThrow<string>('RABBITMQ_URL')],
     queue: 'app_queue',
     queueOptions: { durable: true },
   },
 });
 await app.startAllMicroservices();
-await app.listen(process.env.PORT ?? 3000);
+await app.listen(configService.getOrThrow<number>('PORT'));
 ```
 
 ## Default broker: RabbitMQ

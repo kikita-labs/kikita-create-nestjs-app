@@ -27,8 +27,11 @@ export interface StorageAdapter {
   providers: [
     {
       provide: STORAGE_ADAPTER,
-      useFactory: () =>
-        process.env.STORAGE_DRIVER === 's3' ? new S3StorageAdapter() : new LocalStorageAdapter(),
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) =>
+        configService.getOrThrow<string>('STORAGE_DRIVER') === 's3'
+          ? new S3StorageAdapter()
+          : new LocalStorageAdapter(),
     },
   ],
   exports: [STORAGE_ADAPTER],

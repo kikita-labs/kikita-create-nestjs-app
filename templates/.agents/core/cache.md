@@ -12,11 +12,12 @@ speculatively on every endpoint — add it where a real latency/load problem sho
 // core/cache/cache.module.ts
 @Module({
   imports: [
-    CacheModule.registerAsync({
+    NestCacheModule.registerAsync({
       isGlobal: true,
-      useFactory: () => ({
-        stores: [new Keyv({ store: new KeyvRedis(process.env.REDIS_URL) })],
-        ttl: Number(process.env.CACHE_TTL_SECONDS ?? 60) * 1000,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        stores: [new Keyv({ store: new KeyvRedis(configService.getOrThrow<string>('REDIS_URL')) })],
+        ttl: configService.getOrThrow<number>('CACHE_TTL_SECONDS') * 1000,
       }),
     }),
   ],

@@ -12,7 +12,10 @@ email, generating a report, calling a slow third-party API.
 @Module({
   imports: [
     BullModule.forRootAsync({
-      useFactory: () => ({ connection: { url: process.env.REDIS_URL } }),
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: { url: configService.getOrThrow<string>('REDIS_URL') },
+      }),
     }),
   ],
   exports: [BullModule],

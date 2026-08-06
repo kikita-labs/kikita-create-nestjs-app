@@ -174,5 +174,4 @@ REST and bot transports when both are chosen. See `transport-adapter.md`.
 - [ ] Nothing under `core/` imports from `modules/*`.
 - [ ] No empty `interfaces/`/`enums/`/`constants/`/`guards/` subfolder committed with nothing in
       it — created only when the first file that belongs there exists.
-- [ ] Every module folder has a barrel `index.ts` if it holds more than its own module/
-      controller/service files (see `aliases-and-barrels.md`).
+- [ ] No `index.ts` barrel file anywhere — see `aliases-and-barrels.md` for why.

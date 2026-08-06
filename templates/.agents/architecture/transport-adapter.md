@@ -26,6 +26,7 @@ the identical service method — that's the whole point of keeping them thin.
 ```ts
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const configService = app.get(ConfigService);
 
   app.useLogger(app.get(Logger)); // nestjs-pino
   app.enableShutdownHooks(); // without this, OnModuleDestroy (PrismaService) never fires on SIGTERM
@@ -39,7 +40,7 @@ async function bootstrap() {
   // Auth-only: app.use(cookieParser()), then doubleCsrfProtection scoped to /v1/auth/refresh
   //   — see core/auth.md's Wiring section for why cookieParser() must come before any guard.
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(configService.getOrThrow<number>('PORT'));
 }
 ```
 
@@ -101,14 +102,66 @@ Platform for this project: {{BOT_PLATFORM}}.
   platform's own reply mechanism (`ctx.reply()` for Telegraf, an interaction response for
   Discord).
 - **Rate limiting**: keyed by the platform's user/chat id, not IP — a bot has no meaningful
-  per-request IP. Implement as a guard reading the id off the platform context, reusing the same
-  `@nestjs/throttler` package with a custom `getTracker()`.
+  per-request IP. Implement as a guard extending `ThrottlerGuard`, overriding
+  `getRequestResponse()` to pull the id off the platform context (not off an HTTP req/res pair
+  that doesn't exist) and `getTracker()` to return it. Applied via `@UseGuards(BotThrottlerGuard)`
+  directly on update-handler classes — **not** registered as a global `APP_GUARD`, unlike the
+  REST branch's default `ThrottlerGuard` above. One guard can't cleanly handle both an HTTP
+  req/res pair and a bot update's context shape, and a bot-only app (no REST branch at all)
+  registering `ThrottlerGuard` globally would apply the wrong (IP-based) guard to every update.
+
+  **Mandatory, not optional**: also override `onModuleInit()` to force
+  `this.commonOptions.setHeaders = false` after calling `super.onModuleInit()`, scoped to this
+  guard subclass — not the shared `ThrottlerModule.forRoot()` config, which a REST branch (if
+  the app has one) still wants real headers from. Without this, `ThrottlerGuard.handleRequest()`
+  unconditionally calls `res.header(...)` (the library default), and since a bot update's fake
+  `res` here is `{}`, that throws `TypeError: res.header is not a function` on **every single
+  guarded update** — a crash that a build, a lint pass, and a unit test that only instantiates
+  the guard (never calls `canActivate()`) all miss completely. Write the guard's test to actually
+  call `canActivate()` with a constructed `ExecutionContext`, not just construct the class.
+
+  ```ts
+  @Injectable()
+  export class BotThrottlerGuard extends ThrottlerGuard {
+    async onModuleInit(): Promise<void> {
+      await super.onModuleInit();
+      this.commonOptions.setHeaders = false;
+    }
+
+    protected getRequestResponse(context: ExecutionContext) {
+      return { req: context.getArgByIndex(0), res: {} };
+    }
+
+    protected getTracker(req: Context): Promise<string> {
+      return Promise.resolve(String(req.from?.id ?? 'anonymous'));
+    }
+  }
+  ```
 - **Multi-step flows**: Telegraf's `Scenes`/`WizardScene` or the equivalent construct on another
   platform. Keep scene state minimal (IDs, not full entities) and always have a cancel/timeout
   path — a stuck scene must not become the only way to interact with the bot.
 
 <!-- SCAFFOLD: keep this Telegram sub-block only if platform = Telegram -->
 ### Telegram (`nestjs-telegraf`)
+
+**`TelegrafModule.forRootAsync()` calls `bot.launch()` automatically** as soon as the module
+initializes — there is no separate "start polling" step to opt into, and no way to construct the
+module without it short of `launchOptions: false`. This makes the bot immediately start
+long-polling (or webhook-listening) the real Telegram API the moment `AppModule` boots, which is
+never what you want when `NODE_ENV=test` (a test run, e2e or otherwise, has no business making
+outbound calls to Telegram) or in any environment without a real, working
+`TELEGRAM_BOT_TOKEN`. Gate it:
+
+```ts
+// bot/bot.module.ts
+TelegrafModule.forRootAsync({
+  inject: [ConfigService],
+  useFactory: (configService: ConfigService) => ({
+    token: configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN'),
+    launchOptions: configService.get<string>('NODE_ENV') === 'test' ? false : undefined,
+  }),
+}),
+```
 
 ```ts
 @Update()
@@ -122,6 +175,18 @@ export class StartUpdate {
   }
 }
 ```
+
+**Import gotcha**: current `telegraf` majors restrict which subpaths resolve via `package.json`
+`exports` — a deep import like `telegraf/typings/core/types/typegram` (from an older example
+found online) no longer resolves; use `telegraf/types` instead. Verify against the installed
+version's actual `exports` map if a type import 404s, rather than assuming an old blog post's
+import path still works.
+
+<!-- SCAFFOLD: keep only if i18n was chosen -->
+**With i18n**: `nestjs-telegraf-i18n` needs its module imported alongside `TelegrafModule` and
+its middleware wired in, plus a custom context type so `ctx.t()`/`ctx.tReply()` are available in
+update handlers — see `core/i18n.md`'s Telegram section for the exact wiring, it's more than
+just installing the package.
 
 <!-- SCAFFOLD: keep this Discord sub-block only if platform = Discord -->
 ### Discord (`necord`)

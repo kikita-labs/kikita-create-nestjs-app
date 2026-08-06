@@ -65,11 +65,11 @@ in `eslint.config.js`, not left as review-only:
         },
         {
           name: 'bcrypt',
-          message: "Use 'argon2' (argon2id) instead — see core/auth.md.",
+          message: "Use 'argon2' (argon2id) instead — the fixed password-hashing default.",
         },
         {
           name: 'bcryptjs',
-          message: "Use 'argon2' (argon2id) instead — see core/auth.md.",
+          message: "Use 'argon2' (argon2id) instead — the fixed password-hashing default.",
         },
       ],
     }],
@@ -98,7 +98,7 @@ environment is legitimately unavoidable — **more than just the Zod schema file
 Scope each override narrowly to the actual file(s) it applies to, not a blanket exception that
 swallows the rule everywhere.
 
-Two rules from `@darraghor/eslint-plugin-nestjs-typed`'s own recommended config need a
+Three rules from `@darraghor/eslint-plugin-nestjs-typed`'s own recommended config need a
 scaffold-time override, not a later fix once they cause friction:
 
 - **`no-extraneous-class`** (from `typescript-eslint`, commonly pulled in alongside the Nest
@@ -111,6 +111,12 @@ scaffold-time override, not a later fix once they cause friction:
   released version before relying on it; if it's still flaky when this project is scaffolded,
   disable it with a comment recording that it was flaky as of the version in `package.json`,
   rather than silently dropping it with no explanation for the next person who notices it's off.
+- **`controllers-should-supply-api-tags`** demands `@ApiTags()` on every HTTP controller — fine
+  when Swagger is installed (the REST branch's fixed default), but `core/health.md`'s
+  `HealthController` is an HTTP controller **regardless of application type**: a bot-only
+  project (no REST branch chosen, `@nestjs/swagger` never installed) still has it, and this rule
+  fires on it anyway with nothing to `@ApiTags()` against. Disable this rule project-wide
+  whenever the app type is bot-only (no Swagger installed at all); leave it on for REST/both.
 
 **Gotcha, don't rediscover the hard way**: `@darraghor/eslint-plugin-nestjs-typed`'s
 `param-decorator-name-matches-route-param` rule (which checks `@Param('id')` actually matches a

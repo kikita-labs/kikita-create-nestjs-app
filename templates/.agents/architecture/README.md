@@ -3,7 +3,8 @@
 How the project is laid out and wired together.
 
 - [folder-structure.md](./folder-structure.md) — top-level project layout.
-- [aliases-and-barrels.md](./aliases-and-barrels.md) — path aliases, barrel `index.ts` rules.
+- [aliases-and-barrels.md](./aliases-and-barrels.md) — path aliases (`@app/*`, `@generated/*`)
+  and why this project never uses barrel `index.ts` files.
 - [module-boundaries.md](./module-boundaries.md) — how modules expose a public surface and how
   cross-module imports are restricted.
 - [transport-adapter.md](./transport-adapter.md) — REST/bot transport layer, where it ends and

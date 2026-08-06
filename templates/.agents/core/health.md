@@ -59,7 +59,11 @@ pattern — that pair is deprecated in current Terminus major versions; verify w
 installed version actually expects before copying this literally, the same caveat as Prisma's
 own churn (see `plan.md` step 3).
 
-One `*.health-indicator.ts` per external dependency, under `core/health/indicators/`:
+One `*.health-indicator.ts` per external dependency, under `core/health/indicators/`. Unlike the
+2+-file threshold elsewhere in this project before a subfolder is warranted (see
+`architecture/folder-structure.md`), `indicators/` is created from scaffold time regardless — the
+Prisma indicator alone (always present, since Prisma/health are both fixed defaults) is reason
+enough, not something to second-guess into a flat file instead.
 
 ```ts
 // core/health/indicators/prisma.health-indicator.ts
