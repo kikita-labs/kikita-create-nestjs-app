@@ -6,6 +6,12 @@ genuinely true — do not check a box you didn't verify.
 ## Setup
 
 - [ ] Latest stable NestJS CLI used (`nest --version` matches current stable, not pinned old).
+- [ ] Every dependency installed by this skill (Prisma, `nestjs-pino`, `nestjs-i18n`,
+      `nestjs-telegraf`/`necord`, etc.) is at latest stable, not an older major — check
+      `package.json` against each package's current npm listing, don't assume `pnpm add` alone
+      guarantees it (a stale local registry cache or an existing `overrides`/`resolutions` entry
+      can pin it lower silently). If something genuinely had to be pinned older (a real peer-dep
+      conflict), that's a documented exception in `progress.md`, not a silent default.
 - [ ] Project builds (`{{PACKAGE_MANAGER}} run build`) with zero errors.
 - [ ] Sample `app.controller.ts`/`app.service.ts` (and their specs) removed — not left as dead
       placeholder code.

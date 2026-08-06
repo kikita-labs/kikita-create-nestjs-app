@@ -38,6 +38,13 @@ strategy), also read:
   filter, decorator, middleware, exception, interface, enum, constant, utility) has exactly one
   correct folder per that file's table — never invent an ad hoc top-level folder for something
   it already covers.
+- Every dependency this project installs — Prisma, `nestjs-pino`, `nestjs-i18n`, the bot
+  platform library, everything — is latest stable at install time, same rule as NestJS itself.
+  A library's major-version API can change shape between scaffolds of this skill (Prisma has,
+  more than once) — verify the installed major's actual current API/CLI flags against its own
+  docs rather than trusting an example in this doc set to still be literally correct; the
+  underlying *pattern* (driver adapter, config file requirement, etc.) is what's meant to carry
+  forward, not necessarily the exact syntax.
 - No reusable `interface`/`type`/`enum`/exported `const` left inline in a `.controller.ts`/
   `.service.ts`/`.dto.ts` — it moves to the matching `interfaces/`/`enums/`/`constants/`
   subfolder the moment a second file needs it. See
