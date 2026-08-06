@@ -94,6 +94,9 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
    scoped to `/auth/refresh`, rotated on every use (hash stored in `RefreshToken` Prisma
    model, previous hash invalidated). `RolesGuard` + a `@Roles()` decorator. Do not add
    session-based auth, `bcrypt`, or an alternate token strategy — this is the one default.
+   Add `app.use(cookieParser())` and `csrf-csrf`'s `doubleCsrfProtection` (scoped to
+   `/v1/auth/refresh` only) to the bootstrap wiring from step 7 — `cookieParser()` must run
+   before any guard/middleware that reads `req.cookies`, including the CSRF check itself.
 
 10. **If background jobs were chosen**: `{{PACKAGE_MANAGER}} add @nestjs/bullmq bullmq`, wire
     `BullModule.forRoot()` against the Redis service from step 4, create one example queue

@@ -23,6 +23,19 @@ non-rotating JWT, or an alternate strategy without an ADR (`../decisions/README.
 - **CSRF**: `csrf-csrf` (not `csurf` — deprecated, unmaintained) protecting the `/auth/refresh`
   route and any other cookie-authenticated mutation. Not needed on routes that only accept the
   Bearer access token, since those aren't cookie-driven and browsers don't auto-attach a header.
+- **Wiring, in `main.ts`, before any route handles a request**: `app.use(cookieParser())` first
+  — without it `req.cookies` is `undefined` everywhere, silently breaking both the refresh-cookie
+  read and `csrf-csrf` (which reads the CSRF secret off a cookie too). Then
+  `doubleCsrfProtection` from `csrf-csrf`, applied only to `/v1/auth/refresh` (and any other
+  cookie-authenticated mutation), not globally — it would otherwise also block the Bearer-token
+  routes that don't need it and don't send a CSRF token.
+
+```ts
+// main.ts, only if auth was chosen — added alongside the rest of Bootstrap wiring
+app.use(cookieParser());
+const { doubleCsrfProtection } = doubleCsrf({ getSecret: () => process.env.CSRF_SECRET! });
+app.use('/v1/auth/refresh', doubleCsrfProtection);
+```
 - **Password hashing**: `argon2id` (via the `argon2` package), not `bcrypt` — current best
   practice default, memory-hard against GPU cracking. Never store or log a raw password.
 - **Guards**: `JwtAuthGuard` validates the access token on protected routes
@@ -65,7 +78,9 @@ model RefreshToken {
 - [ ] Access token never set as a cookie; refresh token never returned in a JSON body.
 - [ ] Refresh cookie is `httpOnly` + `Secure` + `SameSite=Strict`, scoped to the refresh path.
 - [ ] Refresh rotation implemented — reuse of an invalidated token revokes the session.
-- [ ] `csrf-csrf` wired on the refresh route.
+- [ ] `app.use(cookieParser())` wired in `main.ts` before any route runs.
+- [ ] `csrf-csrf`'s `doubleCsrfProtection` wired on the refresh route specifically, not
+      globally (Bearer-only routes must not require a CSRF token).
 - [ ] Passwords hashed with `argon2id`, never logged or stored raw.
 - [ ] Every protected route has an explicit guard — nothing relies on a global default-deny that
       doesn't actually exist in Nest.

@@ -33,6 +33,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalFilters(new PrismaExceptionFilter());
   // REST-only: app.enableVersioning(...), app.enableCors(...), SwaggerModule.setup(...)
+  // Auth-only: app.use(cookieParser()), then doubleCsrfProtection scoped to /v1/auth/refresh
+  //   — see core/auth.md's Wiring section for why cookieParser() must come before any guard.
 
   await app.listen(process.env.PORT ?? 3000);
 }
