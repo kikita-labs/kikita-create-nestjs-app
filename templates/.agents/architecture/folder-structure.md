@@ -64,6 +64,13 @@ src/
       local-storage.adapter.ts
       s3-storage.adapter.ts
       storage.module.ts
+    <!-- SCAFFOLD: keep only if i18n was chosen -->
+    i18n/              i18n.module.ts   <- nestjs-i18n wiring, see core/i18n.md
+  <!-- SCAFFOLD: keep only if i18n was chosen -->
+  i18n/                          <- translation content, not code
+    en/                *.json           <- one file per namespace (errors.json, users.json, ...),
+                                            fallback locale, every key must exist here
+    <!-- other locale folders as they're added -->
   modules/                       <- business features, one folder per feature
     users/
       users.module.ts

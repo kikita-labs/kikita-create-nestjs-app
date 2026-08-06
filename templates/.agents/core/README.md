@@ -20,6 +20,8 @@ client). Not a dumping ground for "things that didn't fit elsewhere" — see
 | Cache | module | `core/cache/` | [cache.md](./cache.md) | `@nestjs/cache-manager` + `@keyv/redis`, cache-aside. |
 <!-- SCAFFOLD: keep only if file uploads was chosen -->
 | Storage | module | `core/storage/` | [storage.md](./storage.md) | S3-compatible storage adapter (local dev / real bucket prod). |
+<!-- SCAFFOLD: keep only if i18n was chosen -->
+| I18n | module | `core/i18n/` | [i18n.md](./i18n.md) | `nestjs-i18n`, locale resolution (REST + bot), validation message translation. |
 
 Kind is one of: `service`, `module`, `guard`, `interceptor`.
 

@@ -20,7 +20,7 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
    - `prisma init` generates `prisma.config.ts` at the project root (Prisma 7+) — this file is
      required for `prisma migrate`/`generate` to run at all, don't delete it thinking it's
      scaffold noise. It legitimately reads `process.env` directly (needs a
-     `no-restricted-syntax` override, see step 14) and needs the `dotenv` package to load
+     `no-restricted-syntax` override, see step 15) and needs the `dotenv` package to load
      `.env` before Prisma CLI commands run.
    - **`prisma init` also auto-installs its own agent-skill scaffolding**
      (`.agents/skills/`, `.windsurf/skills/`, `skills-lock.json`, `.claude/skills/prisma-*`) —
@@ -32,7 +32,7 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
      `new PrismaClient({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) })`.
    - In the `generator client` block, set `moduleFormat = "cjs"` explicitly. The current default
      generator emits ESM (`import.meta.url`), which breaks under Jest/ts-jest's CommonJS
-     runtime — if tests were chosen (step 15), this is not optional. Even with `cjs`, the
+     runtime — if tests were chosen (step 16), this is not optional. Even with `cjs`, the
      generated client's own internal imports keep `.js` extensions (NodeNext style) — Jest needs
      a `moduleNameMapper` entry stripping them
      (`{ "^(\\.{1,2}/.*)\\.js$": "$1" }`) in both `jest.config` files (unit and e2e) if tests
@@ -145,7 +145,17 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     alongside the existing HTTP/bot transport (hybrid app, not a separate service), add one
     example `@MessagePattern`/`@EventPattern` handler.
 
-14. **Set up tooling**:
+14. **If i18n was chosen**: `{{PACKAGE_MANAGER}} add nestjs-i18n`, create `src/i18n/en/` with at
+    least one namespace file, wire `I18nModule.forRootAsync()` under `src/core/i18n/` with
+    `AcceptLanguageResolver` (REST) and `fallbackLanguage` from `DEFAULT_LOCALE` env. If REST or
+    both: switch every `class-validator` decorator's `message` option to
+    `i18nValidationMessage()`, add `I18nValidationExceptionFilter` as another `APP_FILTER`
+    provider in `AppModule`. If bot or both: install the platform-specific integration
+    (`nestjs-telegraf-i18n` for Telegram, `@necord/localization` for Discord; for another
+    platform/raw `discord.js`, resolve the platform's per-user locale field by hand — see
+    `templates/.agents/core/i18n.md`).
+
+15. **Set up tooling**:
     - Copy `templates/.gitignore`, `templates/.gitattributes`, `templates/.editorconfig`,
       `templates/.prettierrc`, `templates/.prettierignore`, `templates/.vscode/extensions.json`,
       `templates/.env.example` into the project as-is (env-example gated blocks stripped per the
@@ -194,13 +204,13 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     - Create the skeleton folders `src/core/`, `src/common/`, `src/modules/` (each with a
       barrel `index.ts` where it holds more than one file).
 
-15. **If tests were chosen**, wire Jest (already ships with `nest new`) for unit and/or
+16. **If tests were chosen**, wire Jest (already ships with `nest new`) for unit and/or
     Supertest for e2e per the answer; if "both", also add Testcontainers
     (`@testcontainers/postgresql`) wired into the e2e Jest config to spin up a real Postgres
     per test run instead of mocking Prisma. Document the setup in the generated
     `.agents/testing-and-quality.md`.
 
-16. **Generate the documentation tree** from `templates/`:
+17. **Generate the documentation tree** from `templates/`:
     - `CLAUDE.md`, `AGENTS.md` at project root.
     - `.agents/README.md` — flat index, kept in sync with whichever conditional files actually
       got generated.
@@ -215,13 +225,13 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     - `.agents/shared/README.md` and `.agents/core/README.md` — both start with a registry
       table pre-populated with the always-on entries (Prisma, Logger, Health, the global
       Prisma exception filter), plus `core/health.md` (always, not gated) and `core/auth.md` /
-      `core/queue.md` / `core/cache.md` / `core/storage.md` only for the features actually
-      chosen.
+      `core/queue.md` / `core/cache.md` / `core/storage.md` / `core/i18n.md` only for the
+      features actually chosen.
     - `.agents/decisions/README.md` — always generated, starts with no ADR files.
     - Fill every `{{PLACEHOLDER}}` with the real questionnaire answer. Leave no placeholder text.
     - Update `AGENTS.md`'s "Must Read" list to only reference files that were actually generated.
 
-17. **`git init`, wire remote if given one, first commit.**
+18. **`git init`, wire remote if given one, first commit.**
     - `git init` if not already a repo.
     - If the questionnaire gave a remote URL: `git remote add origin <url>`. If no URL was
       given, skip — do not invent or guess a remote.
@@ -230,4 +240,4 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     - Only push if the git-policy answer authorizes it without asking; otherwise stop after the
       commit and ask before pushing.
 
-18. **Run `checklist.md`.** Fix anything that fails before reporting completion to the user.
+19. **Run `checklist.md`.** Fix anything that fails before reporting completion to the user.

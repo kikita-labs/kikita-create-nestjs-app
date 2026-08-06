@@ -68,6 +68,12 @@ genuinely true — do not check a box you didn't verify.
       selected by env var; Multer `limits` (size + count) and a MIME-type whitelist are enforced.
 - [ ] Messaging: `app.connectMicroservice()` wired alongside the existing transport (same app,
       not a second service); at least one `@MessagePattern`/`@EventPattern` handler exists.
+- [ ] i18n: `AcceptLanguageResolver` wired for REST (not raw `HeaderResolver`);
+      `i18nValidationMessage()` + `I18nValidationExceptionFilter` wired if REST/both; bot
+      resolves locale from the platform's own per-user field (Telegram `language_code` via
+      `nestjs-telegraf-i18n`, Discord interaction locale via `@necord/localization`) if bot/both
+      — never from `Accept-Language`; every translation key present in the `DEFAULT_LOCALE`
+      fallback folder.
 - [ ] Tests: Jest unit and/or Supertest e2e configured per the answer; if "both" was chosen,
       Testcontainers spins up a real Postgres for the e2e run — not mocked.
 
@@ -99,7 +105,7 @@ genuinely true — do not check a box you didn't verify.
 - [ ] `CLAUDE.md` exists and only points to `AGENTS.md`.
 - [ ] `AGENTS.md` "Must Read" list contains only files that actually exist — no dead links.
 - [ ] `.agents/README.md` links only to files that actually exist — no dead links, no missing
-      conditional files (auth, queue, cache, storage, messaging, agent-surface).
+      conditional files (auth, queue, cache, storage, messaging, i18n, agent-surface).
 - [ ] Every file under `.agents/` has all `{{PLACEHOLDER}}` tokens replaced with real values.
 - [ ] `.agents/code-style/README.md` links to every file in `.agents/code-style/`.
 - [ ] `.agents/architecture/README.md` links to every file in `.agents/architecture/`.

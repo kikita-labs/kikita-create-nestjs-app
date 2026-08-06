@@ -92,6 +92,12 @@ strategy), also read:
   introduce an alternate auth strategy without an ADR.
 - Passwords are hashed with `argon2id` (`argon2` package) — `bcrypt`/`bcryptjs` are
   ESLint-blocked (`no-restricted-imports`).
+<!-- SCAFFOLD: keep the next two lines only if i18n was chosen -->
+- Locale resolution differs by transport — REST uses `AcceptLanguageResolver`, a bot never has
+  an `Accept-Language` header and resolves locale from the platform's own per-user locale field
+  instead. See `.agents/core/i18n.md`.
+- Every translation key exists in the fallback locale (`DEFAULT_LOCALE`) even if untranslated
+  elsewhere — a missing key degrades to the fallback language, never an empty string.
 - All tracked repository content is English-only, including TSDoc and comments. No Cyrillic,
   no mojibake.
 - Never add `Co-authored-by`, `Generated-by`, AI attribution, or assistant attribution lines to
