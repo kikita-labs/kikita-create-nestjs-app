@@ -68,19 +68,21 @@ src/
     users/
       users.module.ts
       users.controller.ts         <!-- SCAFFOLD: keep only if REST or both -->
-      user-reports.controller.ts  <- one controller per sub-resource/route-prefix once the
-                                      feature's surface splits — never one controller class
-                                      growing every route that touches the same model; see
-                                      code-style/module-structure.md's "Multiple controllers
-                                      per module"
       users.service.ts
-      user-reports.service.ts     <- only if the sub-resource's logic is non-trivial, same doc
       dto/              create-user.dto.ts, update-user.dto.ts, user-response.dto.ts
       interfaces/                 <- only if this feature has 2+ reusable interfaces; a single
                                      one-off type stays inline in the file that uses it
-      enums/                      <- only if this feature has a reusable enum
       constants/                  <- only if this feature has a reusable constant/lookup table
       guards/                     <- only if this feature has a guard nothing else needs
+      reports/                    <- sub-resource subfolder: a route prefix that split off the
+                                     base controller AND grew its own dto/ (see
+                                     code-style/module-structure.md's "Multiple controllers per
+                                     module") — a sub-resource that's still a single file with
+                                     no DTOs of its own can stay a flat sibling file instead
+        user-reports.controller.ts
+        user-reports.service.ts   <- only if the sub-resource's logic is non-trivial, same doc
+        dto/
+          user-report-response.dto.ts
       users.service.spec.ts
   <!-- SCAFFOLD: keep only if bot or both was chosen -->
   bot/

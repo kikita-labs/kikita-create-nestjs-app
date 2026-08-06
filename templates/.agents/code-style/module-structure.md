@@ -27,32 +27,55 @@ export class UsersModule {}
 
 A feature's REST surface is not required to live in one `<feature>.controller.ts` — `controllers`
 takes an array, and Nest has no problem with more than one entry. Split into a separate
-controller file, in the same module, the moment a feature grows a sub-resource with its own
-route prefix — don't grow one controller class into a dumping ground for every route that
-happens to touch the same Prisma model.
+controller the moment a feature grows a sub-resource with its own route prefix — don't grow one
+controller class into a dumping ground for every route that happens to touch the same Prisma
+model.
+
+**Flat sibling file vs its own subfolder** — don't default to flat: a sub-resource that's
+genuinely one file (a controller with no DTOs of its own, reusing the parent's) can sit as a
+sibling file next to `<feature>.controller.ts`; the moment it grows its **own `dto/`** (a
+response shape, a query DTO — which happens almost immediately, since a sub-resource meaningful
+enough to get its own controller is usually meaningful enough to get its own response shape
+too), promote it to its own subfolder under the feature, `modules/<feature>/<sub-resource>/`,
+mirroring the same internal layout a top-level feature gets. This keeps `modules/<feature>/`'s
+root from accumulating a flat pile of `<sub-resource>.controller.ts` /
+`<sub-resource>.service.ts` / `<sub-resource>-response.dto.ts` files as more sub-resources
+appear — each sub-resource gets exactly one place to live, not three files scattered loose at
+the parent level.
 
 Concretely, for a `users` feature that grows a `/v1/users/reports/unresolved`-style surface:
 
 ```
 modules/users/
   users.module.ts
-  users.controller.ts          <- /v1/users, /v1/users/:id (base CRUD)
-  user-reports.controller.ts   <- /v1/users/reports/... (sub-resource)
+  users.controller.ts       <- /v1/users, /v1/users/:id (base CRUD)
   users.service.ts
-  user-reports.service.ts      <- only if the sub-resource's logic is non-trivial, see below
   dto/
     create-user.dto.ts
     update-user.dto.ts
-    user-report-query.dto.ts
+  reports/                   <- sub-resource subfolder, created once it has its own dto/
+    user-reports.controller.ts   <- /v1/users/reports/...
+    user-reports.service.ts      <- only if the sub-resource's logic is non-trivial, see below
+    dto/
+      user-report-response.dto.ts
 ```
 
-```ts
-@Controller({ path: 'users', version: '1' })
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-  // GET /v1/users, GET /v1/users/:id, POST /v1/users, ...
-}
+Route paths stay plain string literals directly in the decorator — `@Controller('users')`,
+`@Controller('users/reports')` — matching idiomatic Nest (every official example does this; the
+framework's own routing/param-matching tooling, including
+`@darraghor/eslint-plugin-nestjs-typed`'s `param-decorator-name-matches-route-param` rule,
+assumes a literal string and breaks on anything else). Don't reach for an enum or a shared
+constants object here the way `architecture/routing.md`-style Angular conventions might suggest
+— that's a different framework with a structurally different routing mechanism (runtime route
+config objects, not decorator arguments evaluated at class-definition time), and porting the
+convention over gains nothing here while breaking real tooling.
 
+The sub-resource's controller/service/module registration stay exactly as before — only the
+file location changes, imported via a slightly longer relative path
+(`./reports/user-reports.controller.ts` from `users.module.ts`):
+
+```ts
+// modules/users/reports/user-reports.controller.ts
 @Controller({ path: 'users/reports', version: '1' })
 export class UserReportsController {
   constructor(private readonly userReportsService: UserReportsService) {}
@@ -65,6 +88,10 @@ export class UserReportsController {
 ```
 
 ```ts
+// modules/users/users.module.ts
+import { UserReportsController } from './reports/user-reports.controller';
+import { UserReportsService } from './reports/user-reports.service';
+
 @Module({
   controllers: [UsersController, UserReportsController],
   providers: [UsersService, UserReportsService],
@@ -80,13 +107,13 @@ service file with nothing real in it. The moment the sub-resource has its own no
 queries, validation, or side effects, give it its own `<sub-resource>.service.ts` so
 `UsersService` doesn't grow unrelated methods that have nothing to do with a "user" as such.
 
-**When to promote the sub-resource to its own top-level module instead of a second controller
-in `users/`**: only when it stops being genuinely user-scoped — e.g. a `reports` concern that
-spans multiple unrelated features, not just users, belongs in its own `modules/reports/` from
-the start. A sub-resource whose entire reason to exist is "reports about a user" stays inside
-`modules/users/` no matter how many routes it grows; splitting it into a separate module just
-because the file got long is the layer-based-folders mistake `folder-structure.md` already bans,
-one level down.
+**When to promote the sub-resource to its own top-level module instead of a subfolder in
+`users/`**: only when it stops being genuinely user-scoped — e.g. a `reports` concern that spans
+multiple unrelated features, not just users, belongs in its own `modules/reports/` from the
+start. A sub-resource whose entire reason to exist is "reports about a user" stays inside
+`modules/users/reports/` no matter how many routes it grows; splitting it into a separate
+top-level module just because the folder got large is the layer-based-folders mistake
+`folder-structure.md` already bans, one level down.
 
 ## One module per feature folder
 

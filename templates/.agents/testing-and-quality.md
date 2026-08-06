@@ -112,6 +112,15 @@ scaffold-time override, not a later fix once they cause friction:
   disable it with a comment recording that it was flaky as of the version in `package.json`,
   rather than silently dropping it with no explanation for the next person who notices it's off.
 
+**Gotcha, don't rediscover the hard way**: `@darraghor/eslint-plugin-nestjs-typed`'s
+`param-decorator-name-matches-route-param` rule (which checks `@Param('id')` actually matches a
+`:id` segment in the route) crashes ESLint entirely — an uncaught `TypeError`, not a false
+positive — if a `@Controller()`'s `path` is ever anything other than a plain string literal
+(an enum member, a `satisfies`-typed constant, a template literal). This is one more reason
+route paths stay bare string literals in decorators — see
+`code-style/module-structure.md`'s "Multiple controllers per module" section — not just an
+idiom preference.
+
 **Non-null assertions under `strict-type-checked`**: the preset's `no-non-null-assertion`-adjacent
 strictness makes `configService.get<string>('X')!` a lint violation, and it's also a real gap —
 that pattern throws a *different*, less clear error than intended if the value is actually
