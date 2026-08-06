@@ -126,8 +126,33 @@ down, not flattened into the parent module's provider list.
 
 The root module has no feature `controllers`/business `providers` of its own beyond what
 `nest new` scaffolds (and those get deleted per `plan.md` step 2). Its `imports` array lists
-`core/` modules first (Prisma, health, logger, and any of auth/queue/cache/storage that were
-chosen), then every `modules/*` feature module, then the bot module if chosen.
+`core/` modules first (Prisma, health, logger, and any of auth/queue/cache/storage/i18n that
+were chosen), then every `modules/*` feature module, then the bot module if chosen.
+
+**No inline `forRootAsync()` (or `forRoot()`) calls in `AppModule`'s `imports` array** — every
+third-party module that needs config (`LoggerModule`, `I18nModule`, `ThrottlerModule`, etc.)
+gets its own `core/<name>/<name>.module.ts` wrapper that calls `forRootAsync()` internally and
+exports what needs to be exported, same as `PrismaModule` wraps `PrismaService`. `AppModule`
+then imports the wrapper by name. This isn't just tidiness: a config factory inlined in
+`AppModule` can't be unit-tested in isolation, and `AppModule`'s `imports` array stops being a
+scannable list of "what does this app depend on" the moment even one entry is a multi-line
+factory instead of a name.
+
+```ts
+// core/logger/logger.module.ts
+@Module({
+  imports: [
+    NestLoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        /* ... */
+      }),
+    }),
+  ],
+  exports: [NestLoggerModule],
+})
+export class LoggerModule {}
+```
 
 **One explicit exception**: the global cross-cutting providers wired via Nest's `APP_FILTER`/
 `APP_GUARD`/`APP_INTERCEPTOR`/`APP_PIPE` injection tokens (`PrismaExceptionFilter`, the
@@ -153,7 +178,8 @@ export class AppModule {}
 
 - [ ] `@Module()` fields in the order above; empty keys omitted rather than left as `[]`.
 - [ ] Module file sits at the top of its feature folder.
-- [ ] `AppModule` only imports — no stray providers/controllers of its own.
+- [ ] `AppModule` only imports — no stray providers/controllers of its own, and no inline
+      `forRootAsync()`/`forRoot()` factory calls; each has its own `core/<name>/` wrapper.
 - [ ] `exports` reviewed on every change to a module — no accidental surface growth.
 - [ ] A controller file only handles routes under one path prefix — a second, unrelated
       sub-resource prefix growing inside the same controller class is a signal to split, not a

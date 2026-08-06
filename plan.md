@@ -66,9 +66,12 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
      `class-transformer` can't instantiate the nested class and `class-validator` silently skips
      validating it. See `templates/.agents/code-style/dto-and-validation.md`.
 
-6. **Wire logging**: `{{PACKAGE_MANAGER}} add nestjs-pino pino-http`, `LoggerModule.forRoot()`
-   in `AppModule`, replace Nest's bootstrap logger with the Pino one in `main.ts`
-   (`bufferLogs: true` + `app.useLogger(app.get(Logger))`).
+6. **Wire logging**: `{{PACKAGE_MANAGER}} add nestjs-pino pino-http`. Same as every other core
+   singleton (Prisma, Health, Auth, Queue/Cache/Storage, i18n) — the `forRootAsync()` config
+   lives in its own `src/core/logger/logger.module.ts` wrapper, not inlined directly in
+   `AppModule`'s `imports` array. Replace Nest's bootstrap logger with the Pino one in `main.ts`
+   (`bufferLogs: true` + `app.useLogger(app.get(Logger))`, imported straight from `nestjs-pino`
+   — that import is unaffected by the wrapper).
 
 7. **Wire the app-wide bootstrap concerns** (fixed defaults, always on, regardless of app
    type) — see `templates/.agents/architecture/transport-adapter.md`'s "Bootstrap wiring"

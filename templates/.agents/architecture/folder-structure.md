@@ -38,7 +38,7 @@ src/
     prisma/
       prisma.service.ts
       prisma.module.ts
-    logger/
+    logger/            logger.module.ts   <- wraps nestjs-pino's LoggerModule.forRootAsync()
     health/                       <- always present, see core/health.md
       health.controller.ts
       health.module.ts
