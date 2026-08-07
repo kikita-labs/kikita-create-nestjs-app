@@ -1,6 +1,6 @@
 ---
 name: kikita-create-nestjs-app
-description: Scaffold a new NestJS project (latest stable) — REST API and/or bot (any platform) — with a full .agents/ documentation tree, code style, and git policy pre-wired. Use when the user asks to init/bootstrap/create a new NestJS app/API/bot, or invokes /kikita-create-nestjs-app in an empty or near-empty directory.
+description: Scaffold a new NestJS project (latest stable) — REST API and/or bot (any platform) — with a full .agents/ documentation tree, code style, and git policy pre-wired — or, in a project this skill already scaffolded, pull and merge upstream .agents/ doc updates. Use when the user asks to init/bootstrap/create a new NestJS app/API/bot, invokes /kikita-create-nestjs-app in an empty or near-empty directory, or asks to update/sync/refresh the project's agent docs / .agents/ conventions in a project this skill previously scaffolded.
 ---
 
 # kikita-create-nestjs-app
@@ -9,15 +9,25 @@ Bootstraps a new NestJS project and generates its `AGENTS.md` / `.agents/` docum
 any AI agent (Claude Code, Codex, etc.) working in the project afterwards has a complete,
 self-maintaining source of truth.
 
-Follow `plan.md` step by step. Do not skip the questionnaire. When done, run through
-`checklist.md` before telling the user it's finished.
+## 0. Mode detection (always do this first)
 
-## 0. Preconditions
+Check for `.agents/.kikita-scaffold.json` in the target directory.
+
+- **Missing** → fresh init. Continue with section 1 below, then `plan.md`.
+- **Present** → this project was already scaffolded by this skill. Follow `update.md` instead —
+  do not re-run the questionnaire or re-scaffold. `update.md` handles pulling the latest
+  template, diffing since the recorded commit, and merging changes into the project's (possibly
+  customized) `.agents/` files.
+
+## 0.5 Preconditions (fresh init only)
 
 - Confirm the working directory is empty or the user explicitly wants to init here.
 - Never run this against a directory that already has an unrelated project without asking first.
 
 ## 1. Questionnaire (always ask before touching the filesystem)
+
+Follow `plan.md` step by step from here. Do not skip the questionnaire. When done, run through
+`checklist.md` before telling the user it's finished.
 
 Ask in two stages, not as 12 questions dumped in one shot — the first answer decides which of
 the later questions are even relevant, so asking them all upfront means presenting a bot-only

@@ -36,13 +36,13 @@ folder name matches this repo's name.
 **Personal (all your projects):**
 
 ```sh
-git clone <this-repo-url> ~/.claude/skills/kikita-create-nestjs-app
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git ~/.claude/skills/kikita-create-nestjs-app
 ```
 
 **Project-scoped (this project only, committed to the repo):**
 
 ```sh
-git clone <this-repo-url> .claude/skills/kikita-create-nestjs-app
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git .claude/skills/kikita-create-nestjs-app
 ```
 
 Claude Code picks up new/changed skills under `~/.claude/skills/` and `.claude/skills/` live,
@@ -54,13 +54,13 @@ didn't exist yet when the session started (in that case restart once).
 **User scope (all your projects):**
 
 ```sh
-git clone <this-repo-url> "$HOME/.agents/skills/kikita-create-nestjs-app"
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git "$HOME/.agents/skills/kikita-create-nestjs-app"
 ```
 
 **Repo scope (this project, and any subdirectory under it):**
 
 ```sh
-git clone <this-repo-url> .agents/skills/kikita-create-nestjs-app
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git .agents/skills/kikita-create-nestjs-app
 ```
 
 Codex scans `.agents/skills` in the current directory and every parent up to the repo root. If a
@@ -78,6 +78,26 @@ The agent asks the staged questionnaire, then follows `plan.md` end to end: scaf
 wire Prisma/validation/logging/transport, set up tooling, generate the `.agents/` doc tree, set
 up git, and run `checklist.md` before telling you it's done.
 
+## Update
+
+Already scaffolded a project with this skill and the templates have moved on since? Run the
+exact same command inside that project:
+
+```
+/kikita-create-nestjs-app
+```
+
+The skill detects `.agents/.kikita-scaffold.json` (written at scaffold time) and switches to
+update mode instead of re-running the questionnaire: it `git pull`s its own install directory,
+diffs `templates/.agents/` between the commit the project was scaffolded/last-updated from and
+the current `HEAD`, and merges what changed into the project's `.agents/` files — never a blind
+overwrite, since those files usually pick up project-specific edits after scaffolding. See
+[`update.md`](./update.md) for the exact algorithm.
+
+This works the same way whether you're driving Claude Code by hand or a fully agent-driven
+("vibecoding") workflow that never opens the project directly — it's the same slash command
+either way, no separate `-update` skill to install or remember.
+
 ## Scope
 
 Single deployable app, not a monorepo/Nx workspace and not a distributed microservices topology
@@ -88,8 +108,9 @@ See [`templates/.agents/architecture/messaging.md`](./templates/.agents/architec
 ## Repo structure
 
 ```
-SKILL.md          # skill entry point: staged questionnaire + generation rules
+SKILL.md          # skill entry point: mode detection, staged questionnaire + generation rules
 plan.md           # step-by-step init sequence the skill follows
+update.md         # step-by-step sequence for updating an already-scaffolded project
 checklist.md      # post-init verification
 templates/        # everything copied into the generated project
   AGENTS.md, CLAUDE.md, .gitignore, .editorconfig, .prettierrc, .prettierignore,
@@ -99,4 +120,4 @@ templates/        # everything copied into the generated project
 
 ## License
 
-No license file yet — all rights reserved by default until one is added.
+[MIT](./LICENSE)

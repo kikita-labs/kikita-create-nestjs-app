@@ -246,4 +246,11 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     - Only push if the git-policy answer authorizes it without asking; otherwise stop after the
       commit and ask before pushing.
 
-19. **Run `checklist.md`.** Fix anything that fails before reporting completion to the user.
+19. **Write the scaffold record**, `.agents/.kikita-scaffold.json` — the skill's own current
+    commit (`git -C <skill-dir> rev-parse HEAD`, resolved from the running skill's own install
+    location, not guessed) plus every questionnaire answer from step 1. `update.md` reads this
+    on a later run to know what's already applied and how to resolve gates/placeholders
+    without re-asking. This file must be committed, not gitignored — it's how a future update
+    run identifies the project.
+
+20. **Run `checklist.md`.** Fix anything that fails before reporting completion to the user.
