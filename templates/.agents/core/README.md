@@ -23,11 +23,19 @@ client). Not a dumping ground for "things that didn't fit elsewhere" — see
 <!-- SCAFFOLD: keep only if i18n was chosen -->
 | I18n | module | `core/i18n/` | [i18n.md](./i18n.md) | `nestjs-i18n`, locale resolution (REST + bot), validation message translation. |
 
-Kind is one of: `service`, `module`, `guard`, `interceptor`.
+Kind is one of: `service`, `module`, `guard`, `interceptor`, `token`.
+
+A custom-provider injection token (`provide: SOME_TOKEN`, injected via `@Inject(SOME_TOKEN)`)
+that belongs to one of the modules already in this table — `STORAGE_ADAPTER` inside
+`core/storage/`, for example — is that module's implementation detail, not its own registry
+row. A token with no owning module (app-wide, used by more than one unrelated consumer, or
+not tied to a single feature) is `kind: token`, path `core/tokens/<name>.token.ts`, and does
+get its own row — don't leave it flat directly under `core/` uncategorized.
 
 ## Adding an entry
 
-1. Build it under `src/core/<name>/` (see `../architecture/folder-structure.md`).
+1. Build it under `src/core/<name>/` (see `../architecture/folder-structure.md`), or
+   `src/core/tokens/` for a standalone token with no owning module.
 2. Add a row to the table above.
 3. If it has non-trivial wiring or a public API other modules depend on, create
    `.agents/core/<name>.md`. A simple wrapper service can rely on the table row alone.

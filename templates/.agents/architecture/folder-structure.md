@@ -66,6 +66,11 @@ src/
       storage.module.ts
     <!-- SCAFFOLD: keep only if i18n was chosen -->
     i18n/              i18n.module.ts   <- nestjs-i18n wiring, see core/i18n.md
+    tokens/            <- standalone injection tokens with no owning module (app-wide,
+                            used by more than one unrelated consumer); a token that
+                            belongs to one module above (e.g. STORAGE_ADAPTER inside
+                            storage/) stays there instead — created on demand, not
+                            scaffolded empty
   <!-- SCAFFOLD: keep only if i18n was chosen -->
   i18n/                          <- translation content, not code
     en/                *.json           <- one file per namespace (errors.json, users.json, ...),
