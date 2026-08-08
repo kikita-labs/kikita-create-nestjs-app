@@ -29,12 +29,19 @@ import type { CreateUserDto } from './dto/create-user.dto';
   surface is its `*.module.ts` `exports` array, not a barrel — see
   `../architecture/aliases-and-barrels.md` for why this project never uses `index.ts` re-export
   files.
-- This order isn't just hand-formatting discipline — `eslint-plugin-simple-import-sort` (or
-  equivalent) plus `@typescript-eslint/consistent-type-imports` enforce it at lint time. See
-  `../testing-and-quality.md`.
+- This order isn't just hand-formatting discipline — `eslint-plugin-simple-import-sort` plus
+  `@typescript-eslint/consistent-type-imports` enforce it at lint time. See
+  `../testing-and-quality.md` for the exact `groups` array — **`simple-import-sort/imports: 'error'`
+  with no `groups` option set does not enforce this order**, it falls back to the plugin's own
+  default (roughly: side-effect imports, then everything else sorted alphabetically as one block),
+  which sorts `@app/...` before `@nestjs/...` and produces lint-clean code that still violates
+  every rule on this page. The custom `groups` array is not optional wiring.
 
 ## Review Checklist
 
 - [ ] Groups in the order above, blank line between groups.
 - [ ] No deep imports past a module's declared public surface.
 - [ ] No barrel (`index.ts`) import anywhere — every import names the exact declaring file.
+- [ ] `eslint.config.js`'s `simple-import-sort/imports` rule has the explicit `groups` array from
+      `../testing-and-quality.md`, not just the plugin enabled with defaults — confirm by checking
+      the config, not by assuming the plugin's presence is enough.
