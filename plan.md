@@ -3,6 +3,19 @@
 Execute in order. Do not reorder. Do not skip a step because it "seems unnecessary" — if a step
 doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
 
+**Before writing any file in steps 2–16, open the specific `templates/.agents/**/*.md` file that
+step cites and re-read it — don't rely on having read it earlier in the conversation or on
+general NestJS knowledge.** `.agents/` doesn't exist in the target project yet at this point (it's
+only generated in step 17), so the templates under this skill's own directory are the only source
+of truth available while writing code — code written from memory of the questionnaire drifts from
+`folder-structure.md`'s file-type table, `code-style/imports.md`'s group order, and each
+`core/*.md`'s exact file layout in ways a later pass rarely catches. In particular: never invent a
+file suffix that isn't in `folder-structure.md`'s file-type table (no `*.types.ts` — split into
+`*.constant.ts`/`*.interface.ts` per that table), and never place a `core/*.md`-documented
+singleton (auth, queue, cache, storage, i18n) under `src/modules/` — every one of those belongs
+under `src/core/<name>/`, listed in `core/README.md`'s registry, even when the step text below
+doesn't repeat the full path.
+
 1. **Ask the questionnaire** (`SKILL.md` section 1). Do not proceed until every answer is
    recorded.
 
@@ -120,13 +133,19 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
      shared `@nestjs/throttler` install, two guard configurations (IP-keyed for REST routes,
      user/chat-id-keyed for bot handlers).
 
-9. **If auth was chosen**, scaffold the fixed pattern from `templates/.agents/core/auth.md`:
-   `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `argon2`, `cookie-parser`, `csrf-csrf`.
-   Access token short-lived, returned in the response body. Refresh token httpOnly cookie
-   scoped to `/auth/refresh`, rotated on every use (hash stored in `RefreshToken` Prisma
-   model, previous hash invalidated). `RolesGuard` + a `@Roles()` decorator. Do not add
-   session-based auth, `bcrypt`, or an alternate token strategy — this is the one default.
-   Add `app.use(cookieParser())` and `csrf-csrf`'s `doubleCsrfProtection` (scoped to
+9. **If auth was chosen**, scaffold the fixed pattern from `templates/.agents/core/auth.md`
+   **under `src/core/auth/`** — auth is an app-wide singleton like Prisma/Health, never a
+   `src/modules/*` feature, even though it has a controller and DTOs the way a feature does; see
+   `folder-structure.md`'s scaffold tree and `core/README.md`'s registry for the exact layout
+   (`auth.controller.ts`, `auth.service.ts`, `auth.module.ts` flat, plus `guards/`, `strategies/`,
+   `decorators/`, `dto/` subfolders — any extra auth-only service, e.g. an OAuth-provider
+   exchange service, sits flat alongside `auth.service.ts` in that same folder, not in
+   `src/modules/`). Install `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `argon2`,
+   `cookie-parser`, `csrf-csrf`. Access token short-lived, returned in the response body. Refresh
+   token httpOnly cookie scoped to `/auth/refresh`, rotated on every use (hash stored in
+   `RefreshToken` Prisma model, previous hash invalidated). `RolesGuard` + a `@Roles()` decorator.
+   Do not add session-based auth, `bcrypt`, or an alternate token strategy — this is the one
+   default. Add `app.use(cookieParser())` and `csrf-csrf`'s `doubleCsrfProtection` (scoped to
    `/v1/auth/refresh` only) to the bootstrap wiring from step 7 — `cookieParser()` must run
    before any guard/middleware that reads `req.cookies`, including the CSRF check itself.
 
@@ -139,9 +158,13 @@ doesn't apply (e.g. no auth chosen), mark it skipped explicitly and move on.
     pattern and default TTL in `templates/.agents/core/cache.md`.
 
 12. **If file uploads were chosen**: `{{PACKAGE_MANAGER}} add @nestjs/platform-express multer @aws-sdk/client-s3`,
-    build the storage-adapter interface under `src/core/storage/` (local-disk implementation for
-    dev, S3-compatible implementation for prod, selected by an env var), Multer configured with
-    `memoryStorage()` and `limits` (`fileSize`, `files`), MIME-type whitelist in a custom pipe.
+    build the storage adapter under `src/core/storage/` exactly as `core/storage.md` names it —
+    `storage.interface.ts` (`StorageAdapter` interface), `local-storage.adapter.ts`
+    (`LocalStorageAdapter`), `s3-storage.adapter.ts` (`S3StorageAdapter`), `storage.module.ts`.
+    The `.adapter.ts` suffix is deliberate (matches `folder-structure.md`'s file-type table row
+    for "Storage adapter") — don't rename to `.service.ts`/`*Service`, even though it's a
+    `@Injectable()` like every other provider. Multer configured with `memoryStorage()` and
+    `limits` (`fileSize`, `files`), MIME-type whitelist in a custom pipe.
 
 13. **If messaging was chosen**: `{{PACKAGE_MANAGER}} add @nestjs/microservices amqplib amqp-connection-manager`,
     wire `app.connectMicroservice({ transport: Transport.RMQ, options: {...} })` in `main.ts`

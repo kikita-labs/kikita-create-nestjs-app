@@ -23,9 +23,10 @@ don't know why, stop and say so instead of pushing anyway. Husky automates this 
   `class-validator`, controller methods returning the type their `@ApiResponse`/return type
   claims) layered on top of `typescript-eslint`'s `strict-type-checked` preset (full type-aware
   strictness: no floating promises, no unsafe `any` usage, exhaustive switch checks). Add
-  `eslint-plugin-simple-import-sort` (or equivalent) and
-  `@typescript-eslint/consistent-type-imports` so the group order in `code-style/imports.md` is
-  machine-enforced, not just hand discipline. Add a restricted-import rule
+  `eslint-plugin-simple-import-sort` **with the explicit `groups` array from "Mechanically
+  Enforced Rules" below** and `@typescript-eslint/consistent-type-imports` so the group order in
+  `code-style/imports.md` is machine-enforced, not just hand discipline — the plugin's default
+  groups do not match `imports.md` and must not be relied on. Add a restricted-import rule
   (`no-restricted-imports` / `eslint-plugin-boundaries`) so a module can't import another
   module's internals directly and `common`/`core` can't import "up" into `modules/` — see
   `architecture/module-boundaries.md`. Put `eslint-config-prettier` last in the config array so
@@ -48,12 +49,29 @@ don't know why, stop and say so instead of pushing anyway. Husky automates this 
 ## Mechanically Enforced Rules
 
 Several rules in `AGENTS.md` are only real if ESLint actually blocks the violation — a rule that
-only lives in prose gets missed under time pressure. These four are cheap to enforce and must be
-in `eslint.config.js`, not left as review-only:
+only lives in prose gets missed under time pressure. These are cheap to enforce and must be in
+`eslint.config.js`, not left as review-only — including the import-sort `groups` array, which is
+easy to skip because the plugin still "works" (lints clean) with its own default groups instead:
 
 ```js
 {
   rules: {
+    // Matches code-style/imports.md's group order exactly: node builtins, @nestjs/*,
+    // third-party, @app/* and @generated/* aliases, relative imports — type-only imports are
+    // sorted within whichever group they belong to by consistent-type-imports below, not pulled
+    // into a separate group. Without this `groups` array, simple-import-sort falls back to its
+    // own default (one alphabetical block) and silently stops enforcing imports.md at all.
+    'simple-import-sort/imports': ['error', {
+      groups: [
+        ['^node:'],
+        ['^@nestjs'],
+        ['^\\w', '^@(?!app|generated)'],
+        ['^@app', '^@generated'],
+        ['^\\.'],
+      ],
+    }],
+    'simple-import-sort/exports': 'error',
+    '@typescript-eslint/consistent-type-imports': 'error',
     'no-restricted-imports': ['error', {
       paths: [
         {

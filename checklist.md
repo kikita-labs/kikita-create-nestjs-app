@@ -101,6 +101,21 @@ genuinely true — do not check a box you didn't verify.
       `.agents/testing-and-quality.md`'s "Mechanically Enforced Rules" are actually present in
       `eslint.config.js` — confirm by writing a throwaway file that violates each and running
       lint, not just reading the config.
+- [ ] `simple-import-sort/imports` has the exact `groups` array from `testing-and-quality.md`, not
+      the plugin's bare default — confirm by writing a throwaway file that imports something from
+      `@app/...` above something from `@nestjs/...` with no blank line between, running lint, and
+      seeing it actually flagged. A clean `lint` run alone does not prove this rule is configured
+      correctly, since the plugin lints clean either way.
+- [ ] Every file actually generated matches `folder-structure.md`'s file-type table: no file
+      suffix invented outside that table (no `*.types.ts`, no ad hoc top-level folder); every
+      `core/*.md`-documented singleton (auth, queue, cache, storage, i18n) lives under
+      `src/core/<name>/`, never under `src/modules/`; storage adapter files use the `.adapter.ts`
+      suffix `core/storage.md` specifies, not `.service.ts`.
+- [ ] No `interface`/`type`/`enum`/exported `const` imported by more than one file still sits
+      inline in a `.controller.ts`/`.service.ts`/flat feature file — grep each generated feature
+      folder for cross-file imports of a locally-declared symbol and confirm anything reused
+      moved to the matching `interfaces/`/`enums/`/`constants/` subfolder per
+      `folder-structure.md`'s "No inline reusable declarations".
 - [ ] `lint`, `format`, `format:check` scripts exist and run clean.
 - [ ] `package.json` has `"prepare": "husky"`. Husky installed: `pre-commit` runs `lint-staged`
       + the non-English content check, `pre-push` runs the full lint + format + test gate.
