@@ -110,6 +110,16 @@ Platform for this project: {{BOT_PLATFORM}}.
   req/res pair and a bot update's context shape, and a bot-only app (no REST branch at all)
   registering `ThrottlerGuard` globally would apply the wrong (IP-based) guard to every update.
 
+  There's a second, framework-specific reason to scope this per-class rather than global, beyond
+  the req/res mismatch above: **verify whether the chosen bot framework fires a global
+  guard/interceptor/filter once per actual user action, or once per registered listener bound to
+  that event type.** Confirmed for Necord — a global guard/interceptor/filter runs once per
+  listener, not once per Discord interaction. With more than one listener bound to the same
+  event, an app-wide `BotThrottlerGuard` produces duplicate throttle checks and, since this guard
+  responds on rejection, duplicate replies to the user. Per-command-class `@UseGuards()` (as
+  above) sidesteps this entirely; don't assume the REST pattern of "guards belong on `AppModule`
+  as `APP_GUARD`" transfers to a bot framework without checking its actual dispatch model first.
+
   **Mandatory, not optional**: also override `onModuleInit()` to force
   `this.commonOptions.setHeaders = false` after calling `super.onModuleInit()`, scoped to this
   guard subclass — not the shared `ThrottlerModule.forRoot()` config, which a REST branch (if

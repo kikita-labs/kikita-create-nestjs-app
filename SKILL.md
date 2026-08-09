@@ -45,6 +45,12 @@ user with an "auth for your REST API" question that doesn't apply to them.
    - Any other platform/library (name it — the generic bot transport pattern in
      `architecture/transport-adapter.md` adapts to it, but the concrete adapter code needs to be
      written by hand for anything outside `nestjs-telegraf`/`necord`).
+   - **If bot-only (not REST, not "both")**: does this bot own its data (needs a real database),
+     or is it a pure client to an existing backend — every persistence operation goes through
+     that backend's REST/WS API, the bot itself never talks to a database? This decides whether
+     Prisma+Postgres gets scaffolded at all — see the ORM/DB fixed default below and `plan.md`
+     step 3's gate. Never assume "owns its data" silently; a bot fronting an existing backend is
+     a common topology this skill must not force a database onto.
 
 **Stage 2 — everything else, batched (question 3 only asked if stage 1 answered REST or
 "both"; every other question below applies regardless of application type):**
@@ -93,8 +99,14 @@ single app) — it never spins up a second service.
 
 Fixed defaults — **never** ask about these, they're locked by design:
 
-- **ORM/DB**: Prisma + Postgres. No TypeORM (not recommended for new projects), no Drizzle (niche
-  perf/edge pick), no NoSQL/MongoDB branch in v1 of this skill.
+- **ORM/DB**: Prisma + Postgres for REST and "both" — always, never asked. No TypeORM (not
+  recommended for new projects), no Drizzle (niche perf/edge pick), no NoSQL/MongoDB branch in
+  v1 of this skill. **Bot-only is the one exception**: if stage 1's bot sub-question above was
+  answered "pure client to an existing backend", skip Prisma/Postgres entirely — no
+  `@prisma/client`, no `schema.prisma`, no `docker-compose.yml` Postgres service, no
+  `PrismaService`/`PrismaModule`, no `PrismaExceptionFilter`. Every other step below that
+  mentions Prisma (health readiness, Testcontainers, path aliases' `@generated/*` mapping) is
+  conditional on this answer too — see `plan.md` step 3's gate and the steps it points at.
 - **Validation**: `class-validator` + `class-transformer` on the HTTP layer, global
   `ValidationPipe` wired in `main.ts` unconditionally with `whitelist`, `forbidNonWhitelisted`,
   `forbidUnknownValues`, and `transform` all `true`. Zod for env/config validation

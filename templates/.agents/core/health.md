@@ -14,11 +14,18 @@ Always present, not questionnaire-gated — a deployable service needs this from
   actually fix (event loop responsiveness, memory pressure) — not things a restart does nothing
   for.
 - **`GET /health/ready`** — "can this instance actually serve a request right now?" Checks every
-  external dependency the app needs to function: Prisma always, plus Redis if BullMQ/caching was
-  chosen, plus RabbitMQ if messaging was chosen. This is what an orchestrator uses to decide
-  whether to route traffic to this instance — a failed readiness check pulls the pod out of the
-  load-balancer rotation without killing it, which is the correct reaction to "my dependency is
-  temporarily down."
+  external dependency the app needs to function: Prisma (if this project has it — see below),
+  plus Redis if BullMQ/caching was chosen, plus RabbitMQ if messaging was chosen. This is what an
+  orchestrator uses to decide whether to route traffic to this instance — a failed readiness
+  check pulls the pod out of the load-balancer rotation without killing it, which is the correct
+  reaction to "my dependency is temporarily down."
+
+  **A bot-only app that's a pure client to an existing backend has no Prisma at all** (see
+  `plan.md` step 3's gate) — its dependency isn't a database, it's that backend's own API. Its
+  readiness check must not come back empty just because there's no database to ping; it checks
+  the upstream backend instead, via a `HttpHealthIndicator`-based indicator hitting that
+  backend's own health endpoint (`@nestjs/terminus` ships `HttpHealthIndicator` for exactly this
+  — no custom Prisma-style indicator needed here, unlike the Prisma case below).
 
 Never merge these into a single `GET /health` — that's the mistake this file exists to prevent
 mid-scaffold. If a project's deploy target has no orchestrator wired yet, both endpoints still
@@ -90,6 +97,20 @@ Add a `RedisHealthIndicator`/`RabbitMQHealthIndicator` the same shape when those
 chosen — a lightweight connectivity check (ping/status call), not a full round-trip through
 business logic.
 
+For a bot-only pure-client app (no Prisma), swap the Prisma indicator above for the built-in
+`HttpHealthIndicator`, pointed at the upstream backend's own health route:
+
+```ts
+// health.controller.ts, readiness route
+readiness() {
+  return this.health.check([
+    () => this.http.pingCheck('backend', `${this.config.getOrThrow('BACKEND_URL')}/health/live`),
+  ]);
+}
+```
+
+No custom `*.health-indicator.ts` file needed for this case — `HttpHealthIndicator` is built in.
+
 ## Both routes are unauthenticated and unversioned-in-practice
 
 `/health/live` and `/health/ready` are excluded from any auth guard (an orchestrator has no
@@ -101,8 +122,9 @@ point infra config at whatever the current default version resolves to.
 
 - [ ] `/health/live` checks nothing external — restarting the process is the only remedy it
       implies.
-- [ ] `/health/ready` checks every external dependency actually wired (Prisma always, Redis/
-      RabbitMQ if chosen) — not a subset, not "just Prisma because that's what shipped first".
+- [ ] `/health/ready` checks every external dependency actually wired (Prisma if this project
+      has one, Redis/RabbitMQ if chosen, the upstream backend if this is a bot-only pure-client
+      app) — not a subset, not "just Prisma because that's what shipped first", and never empty.
 - [ ] Both routes excluded from auth guards.
 - [ ] A dependency added later (a new external service) gets its own indicator added to
       `/health/ready` in the same change — see `../documentation.md`.

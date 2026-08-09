@@ -23,8 +23,21 @@ doesn't repeat the full path.
    package manager (`--package-manager {{PACKAGE_MANAGER}}`; default `pnpm`). Delete the
    generated sample `app.controller.ts`/`app.service.ts`/their `.spec.ts` files — they're
    placeholder noise, not a real feature module.
+   - **Nest CLI slugifies the project name to kebab-case** regardless of what's typed —
+     `nest new botV2` silently produces a `bot-v2/` directory, not `botV2/`. If the target
+     directory name must match something specific (a monorepo's `apps/<exact-name>` convention,
+     an existing sibling app's naming), check the generated folder name immediately after this
+     step and rename it before continuing — don't discover the mismatch later.
 
-3. **Wire Prisma + Postgres** (fixed default, no question asked). Prisma's CLI/client API has
+3. **Wire Prisma + Postgres — skip this entire step if bot-only and the questionnaire answer
+   was "pure client to an existing backend"** (`SKILL.md` section 1's bot sub-question). In
+   that case: no `@prisma/client`/`prisma` install, no `schema.prisma`, no `PrismaService`/
+   `PrismaModule`, no Postgres service in `docker-compose.yml` (step 4), no `DATABASE_URL`,
+   no `@generated/*` path alias (step 15), no `PrismaHealthIndicator` (step 7), no
+   Testcontainers (step 16), no `PrismaExceptionFilter` (step 7). This app talks to its data
+   exclusively through the existing backend's REST/WS API — treat it the same as any other
+   external HTTP dependency. Otherwise (REST, "both", or bot-only "owns its data"), fixed
+   default, no question asked. Prisma's CLI/client API has
    changed shape across majors more than once — verify the installed major's actual API against
    its current docs before following this step literally; the specifics below are current for
    Prisma 7 and will need re-checking again whenever the "latest stable" moves past it:
@@ -60,7 +73,9 @@ doesn't repeat the full path.
      compile on the first `@prisma/client` import until someone remembers to run it by hand.
 
 4. **Write `docker-compose.yml`** (always generated, dev/test only):
-   - Postgres service always present, env-driven credentials matching `.env.example`.
+   - Postgres service present whenever step 3 wasn't skipped, env-driven credentials matching
+     `.env.example`. A bot-only pure-client app (step 3 skipped) gets no Postgres service here —
+     it has no database to run one for.
    - Add the Redis service only if BullMQ and/or caching was chosen (share one instance for
      both — don't spin up two Redis containers).
    - Add the RabbitMQ service only if messaging was chosen.
@@ -101,16 +116,21 @@ doesn't repeat the full path.
      serialization approach.
    - `{{PACKAGE_MANAGER}} add @nestjs/terminus`, wire a `HealthModule` with **two** routes —
      `GET /health/live` (checks nothing external, only "is the process responsive") and
-     `GET /health/ready` (checks Prisma + any chosen Redis/RabbitMQ dependency) — never a single
+     `GET /health/ready` (checks Prisma + any chosen Redis/RabbitMQ dependency — or, if step 3
+     was skipped for a bot-only pure-client app, checks the existing backend's own health/API
+     endpoint instead via a custom `HttpHealthIndicator`-based indicator; a bot-only readiness
+     check must never come back empty just because it has no database) — never a single
      merged `GET /health`. See `templates/.agents/core/health.md` for why liveness must never
      depend on an external service. Always generated, not questionnaire-gated.
-   - A global `PrismaExceptionFilter` under `src/common/filters/` mapping
-     `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002`
+   - **If step 3 wasn't skipped**: a global `PrismaExceptionFilter` under `src/common/filters/`
+     mapping `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002`
      unique-constraint → `ConflictException`, `P2025` record-not-found →
      `NotFoundException`, etc.) — without it, a Prisma constraint violation surfaces as an
      unhandled 500 instead of the correct 4xx. Registered as an `APP_FILTER` provider in
      `AppModule` (see `templates/.agents/code-style/module-structure.md`), **not**
-     `app.useGlobalFilters()` in `main.ts`.
+     `app.useGlobalFilters()` in `main.ts`. A bot-only pure-client app has no Prisma, so this
+     filter doesn't apply — its own upstream-API error mapping (if any) is a project-specific
+     concern, not this fixed default.
    - Error responses use Nest's default `HttpException` JSON shape (`statusCode`, `message`,
      `error`) — no custom envelope wrapper. The Prisma exception filter's whole job is making
      sure Prisma errors end up going through that same shape via a real `HttpException`
@@ -126,8 +146,24 @@ doesn't repeat the full path.
    - **Bot**: install the platform library (`nestjs-telegraf` for Telegram, `necord` for
      Discord; for "another platform", install what the user named and hand-adapt the generic
      Update-handler pattern) plus `@nestjs/throttler` if not already added by the REST branch.
+     **Verify the platform library's current `peerDependencies` against the exact version being
+     installed before treating the pair as compatible** — e.g. `necord`'s pinned
+     `discord-api-types` range vs the `discord.js` version actually resolved; an unmet-peer
+     warning for a transitive type-only package is common and usually harmless, but check the
+     library's own changelog/issues for that specific pair rather than assuming so silently
+     (same caveat this plan already applies to Prisma's API churn in step 3).
      Create `src/bot/bot.module.ts` + `src/bot/updates/`, with a custom `getTracker()` on the
      throttler guard keyed by the platform's user/chat id instead of IP.
+     **Before registering the throttler guard globally as an `APP_GUARD`, verify whether the
+     chosen bot framework fires global guards/interceptors/filters once per actual user
+     action or once per registered listener bound to that event type.** Confirmed for Necord:
+     a global guard runs once per listener, not once per Discord interaction — with multiple
+     listeners bound to the same event this produces duplicate throttle checks and, if the
+     guard itself responds on rejection, duplicate replies. If the framework behaves this way,
+     scope the guard per-command-class (`@UseGuards(BotThrottlerGuard)` on each update handler,
+     as `architecture/transport-adapter.md` already documents) instead of registering it
+     app-wide — the REST branch's "always global" default does not transfer to bot frameworks
+     unchecked.
    - **Both**: do both of the above; `src/modules/` business logic is shared, only the thin
      transport layer differs (Controller vs Update handler calling the same service). One
      shared `@nestjs/throttler` install, two guard configurations (IP-keyed for REST routes,
@@ -177,9 +213,15 @@ doesn't repeat the full path.
     both: switch every `class-validator` decorator's `message` option to
     `i18nValidationMessage()`, add `I18nValidationExceptionFilter` as another `APP_FILTER`
     provider in `AppModule`. If bot or both: install the platform-specific integration
-    (`nestjs-telegraf-i18n` for Telegram, `@necord/localization` for Discord; for another
+    (`nestjs-telegraf-i18n` for Telegram, `@necord/localization` for Discord — **verify this
+    package actually exists, is current, and is what the platform's real docs recommend before
+    installing it; don't treat a named package here as fact without checking**, same caveat this
+    plan applies to Prisma's API in step 3; for another
     platform/raw `discord.js`, resolve the platform's per-user locale field by hand — see
-    `templates/.agents/core/i18n.md`).
+    `templates/.agents/core/i18n.md`). If no verified package exists for the chosen platform, an
+    explicit `{lang}` argument threaded through every translation call is an acceptable
+    fallback — resolvers like `AcceptLanguageResolver` are HTTP-request-shaped and don't apply
+    to a bot context anyway.
 
 15. **Set up tooling**:
     - Copy `templates/.gitignore`, `templates/.gitattributes`, `templates/.editorconfig`,
@@ -196,10 +238,12 @@ doesn't repeat the full path.
       stopped reading that location). Skipping this step produces packages that silently don't
       work (`argon2` falls back to a pure-JS shim or errors at runtime) with no install-time
       error pointing at the cause.
-    - **Wire `@app/*` and `@generated/*` path aliases** end to end —
+    - **Wire `@app/*` path alias** end to end (and `@generated/*` too, **unless step 3 was
+      skipped** — a bot-only pure-client app has no `generated/` Prisma output to map, so that
+      half of the alias subsystem doesn't apply) —
       `architecture/aliases-and-barrels.md` declares them mandatory, so this subsystem has to
       actually exist, not just be assumed:
-      - `tsconfig.json` `compilerOptions.paths`: `"@app/*": ["src/*"]` and
+      - `tsconfig.json` `compilerOptions.paths`: `"@app/*": ["src/*"]` and, if Prisma was wired,
         `"@generated/*": ["generated/*"]` (the Prisma client output lives outside `src/`, so it
         needs its own mapping — see `aliases-and-barrels.md`).
       - TypeScript's `paths` is a type-checking-only feature — it does not rewrite import paths
@@ -234,9 +278,13 @@ doesn't repeat the full path.
       `index.ts` in any of them — see `architecture/aliases-and-barrels.md`.
 
 16. **If tests were chosen**, wire Jest (already ships with `nest new`) for unit and/or
-    Supertest for e2e per the answer; if "both", also add Testcontainers
-    (`@testcontainers/postgresql`) wired into the e2e Jest config to spin up a real Postgres
-    per test run instead of mocking Prisma. Document the setup in the generated
+    Supertest for e2e per the answer; if "both" **and step 3 wasn't skipped** (i.e. Prisma was
+    actually wired), also add Testcontainers (`@testcontainers/postgresql`) wired into the e2e
+    Jest config to spin up a real Postgres per test run instead of mocking Prisma. A bot-only
+    pure-client app has no Prisma to test against a real database — do not install
+    Testcontainers for it regardless of the tests answer; instead, its e2e layer mocks/stubs the
+    HTTP/WS surface of the backend it calls (e.g. `nock`/an in-memory fake server), documented
+    the same way in `.agents/testing-and-quality.md`. Document the setup in the generated
     `.agents/testing-and-quality.md`.
 
 17. **Generate the documentation tree** from `templates/`:
