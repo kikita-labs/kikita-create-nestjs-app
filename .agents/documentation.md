@@ -15,10 +15,10 @@ most common mistake here.
 
 All under `skills/kikita-create-nestjs-app/`:
 
-- `SKILL.md` — entry point: mode detection, the two-stage questionnaire, generation rules.
-  Read first when changing skill behavior. (This skill has no `adopt.md` — it doesn't
-  support retrofitting docs onto an existing, non-scaffolded NestJS project.)
+- `SKILL.md` — entry point: mode detection (init/adopt/update), the two-stage
+  questionnaire, generation rules. Read first when changing skill behavior.
 - `plan.md` — step-by-step fresh-init sequence.
+- `adopt.md` — retrofit sequence for an existing (non-scaffolded) NestJS project.
 - `update.md` — diff/merge sequence for an already-scaffolded project. Contains `git -C
   <plugin-root>` commands hardcoded to the `skills/kikita-create-nestjs-app/templates/`
   path — keep those in sync if this repo's layout ever changes again.
