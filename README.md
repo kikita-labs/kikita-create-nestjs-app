@@ -127,22 +127,6 @@ Single deployable app, not a monorepo/Nx workspace and not a distributed microse
 (`app.connectMicroservice()`) inside the same single app — it never spins up a second service.
 See [`templates/.agents/architecture/messaging.md`](./skills/kikita-create-nestjs-app/templates/.agents/architecture/messaging.md).
 
-## Repo structure
-
-```
-plugin.json         # Agent Plugins manifest (name, version, metadata) — see agent-plugins.org
-skills/
-  kikita-create-nestjs-app/
-    SKILL.md          # skill entry point: mode detection, staged questionnaire + generation rules
-    plan.md           # step-by-step init sequence the skill follows
-    update.md         # step-by-step sequence for updating an already-scaffolded project
-    checklist.md      # post-init verification
-    templates/        # everything copied into the generated project
-      AGENTS.md, CLAUDE.md, .gitignore, .editorconfig, .prettierrc, .prettierignore,
-      .nvmrc, .vscode/extensions.json, .env.example, docker-compose.yml
-      .agents/         # the documentation tree template, mirrors what gets generated
-```
-
 ## License
 
 [MIT](./LICENSE)
