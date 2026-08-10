@@ -7,7 +7,7 @@ Follow this sequence for any change to this repo.
    `main`, it's branch-protected and will reject the push anyway. See `git-policy.md`.
 3. Make the change in the right place:
    - Skill behavior/instructions (questionnaire, mode detection, generation rules) →
-     `skills/kikita-create-nestjs-app/SKILL.md`, `plan.md`, `update.md`,
+     `skills/kikita-create-nestjs-app/SKILL.md`, `plan.md`, `adopt.md`, `update.md`,
      `checklist.md`.
    - What gets generated into a user's project → `skills/kikita-create-nestjs-app/templates/`.
      See `documentation.md` for placeholder/gate rules before editing here.
