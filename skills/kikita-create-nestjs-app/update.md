@@ -14,15 +14,18 @@ template over a customized file.
 
 ## 1. Locate the skill's own source
 
-The skill is running from wherever it was installed (`~/.claude/skills/kikita-create-nestjs-app`,
-`.claude/skills/kikita-create-nestjs-app`, `~/.agents/skills/...`, or `.agents/skills/...` — see
-`README.md`'s Install section). That install directory is a git clone of this repo; resolve its
-path from the currently executing skill's own location, don't guess or re-derive it.
+The skill is running from wherever the plugin/skill was installed (`~/.claude/skills/kikita-create-nestjs-app`,
+`.claude/skills/kikita-create-nestjs-app`, `~/.agents/skills/...`, `.agents/skills/...`, or,
+for an Agent-Plugins-compatible client, wherever it unpacked the `kikita-create-nestjs-app`
+plugin package — see `README.md`'s Install section). Resolve `<plugin-root>` — the directory
+containing `plugin.json` (a git clone of this repo) — from the currently executing skill's own
+location; don't guess or re-derive it. This skill's own template tree then lives at
+`<plugin-root>/skills/kikita-create-nestjs-app/templates/`.
 
-- `git -C <skill-dir> status --porcelain` — if it reports local changes, stop and tell the user:
+- `git -C <plugin-root> status --porcelain` — if it reports local changes, stop and tell the user:
   this install has been hand-edited and pulling would risk losing that; ask how they want to
   proceed rather than pulling over it.
-- Otherwise `git -C <skill-dir> pull --ff-only` to bring the template source current before
+- Otherwise `git -C <plugin-root> pull --ff-only` to bring the template source current before
   diffing anything.
 
 ## 2. Read the project's scaffold record
@@ -57,19 +60,21 @@ user already answered, unless a diff specifically depends on an answer this reco
 ## 3. Diff since last sync
 
 ```
-git -C <skill-dir> log --oneline <scaffoldedFromCommit>..HEAD -- templates/.agents
+git -C <plugin-root> log --oneline <scaffoldedFromCommit>..HEAD -- skills/kikita-create-nestjs-app/templates/.agents
 ```
 
 Empty output → docs are already current. Report that and stop; don't rewrite the scaffold
 record for a no-op.
 
-Otherwise, for every file under `templates/.agents/` touched in that range:
+Otherwise, for every file under `skills/kikita-create-nestjs-app/templates/.agents/` touched
+in that range:
 
 ```
-git -C <skill-dir> diff <scaffoldedFromCommit>..HEAD -- templates/.agents/<relpath>
+git -C <plugin-root> diff <scaffoldedFromCommit>..HEAD -- skills/kikita-create-nestjs-app/templates/.agents/<relpath>
 ```
 
-Map `templates/.agents/<relpath>` to the project path `.agents/<relpath>`.
+Map `skills/kikita-create-nestjs-app/templates/.agents/<relpath>` to the project path
+`.agents/<relpath>`.
 
 ## 4. Apply per file
 
@@ -80,7 +85,7 @@ Map `templates/.agents/<relpath>` to the project path `.agents/<relpath>`.
   destroys project-specific edits. If the project's file has already diverged so far that the
   diff's target text can't be located, stop on that file and describe the conflict instead of
   guessing.
-- **File is new upstream** (added to `templates/.agents/` after this project's scaffold commit)
+- **File is new upstream** (added to `skills/kikita-create-nestjs-app/templates/.agents/` after this project's scaffold commit)
   and is a gated file (`core/auth.md`, `core/queue.md`, `core/cache.md`, `core/storage.md`,
   `core/messaging.md`, `core/i18n.md`, `agent-surface.md`, bot-specific transport docs): only
   add it if the stored `answers` say the gate is open for this project. Resolve any
@@ -97,8 +102,8 @@ restructure should be previewed first.
 ## 5. Record the new sync point
 
 After applying (or explicitly skipping) every changed file, update
-`.agents/.kikita-scaffold.json`'s `scaffoldedFromCommit` to the skill repo's current `HEAD`
-(`git -C <skill-dir> rev-parse HEAD`). Do this even if some files were skipped on conflict —
+`.agents/.kikita-scaffold.json`'s `scaffoldedFromCommit` to the plugin repo's current `HEAD`
+(`git -C <plugin-root> rev-parse HEAD`). Do this even if some files were skipped on conflict —
 those are called out in the report, not silently dropped, but re-running the update shouldn't
 re-show already-reviewed changes for files that *were* applied.
 

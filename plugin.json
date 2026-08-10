@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "kikita-create-nestjs-app",
+  "version": "1.0.0",
+  "description": "Scaffold a new NestJS project (REST API and/or bot) with a full .agents/ documentation tree, or update that tree on an existing project.",
+  "homepage": "https://github.com/kikita-labs/kikita-create-nestjs-app",
+  "repository": "https://github.com/kikita-labs/kikita-create-nestjs-app",
+  "license": "MIT",
+  "keywords": ["nestjs", "scaffold", "agents", "documentation", "skill"]
+}

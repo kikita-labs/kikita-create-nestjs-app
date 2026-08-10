@@ -5,14 +5,19 @@ any platform (Telegram, Discord, or another), or both in the same app — and ge
 `.agents/` documentation tree alongside it, so any AI agent working in the project afterwards has
 a complete, self-maintaining source of truth from commit one.
 
-See [`SKILL.md`](./SKILL.md) for what it does, [`plan.md`](./plan.md) for the exact step-by-step
-scaffolding sequence, and [`checklist.md`](./checklist.md) for the post-init verification it runs
-before handing the project back to you.
+Packaged as an [Agent Plugin](https://agent-plugins.org) (spec v1.0.0) — a portable format
+usable by any compatible client (Cursor, GitHub Copilot, ChatGPT/Codex, VS Code, Kiro, …),
+not just Claude Code.
+
+See [`skills/kikita-create-nestjs-app/SKILL.md`](./skills/kikita-create-nestjs-app/SKILL.md) for
+what it does, [`plan.md`](./skills/kikita-create-nestjs-app/plan.md) for the exact step-by-step
+scaffolding sequence, and [`checklist.md`](./skills/kikita-create-nestjs-app/checklist.md) for
+the post-init verification it runs before handing the project back to you.
 
 ## What it generates
 
 - `CLAUDE.md` → `AGENTS.md` → `.agents/*.md` — the full documentation tree, described in
-  [`templates/.agents/README.md`](./templates/.agents/README.md).
+  [`templates/.agents/README.md`](./skills/kikita-create-nestjs-app/templates/.agents/README.md).
 - A working NestJS app: latest stable Nest CLI, Prisma + Postgres, global `ValidationPipe`
   (`class-validator`/`class-transformer`), Zod-validated env config, `nestjs-pino` structured
   logging, ESLint (`@darraghor/eslint-plugin-nestjs-typed`) + Prettier + Husky pre-wired, a local
@@ -20,29 +25,42 @@ before handing the project back to you.
 - REST branch: Swagger at `/docs`, URI versioning (`/v1/...`), env-driven CORS allowlist.
 - Bot branch: generic Update-handler transport pattern, with concrete adapters for
   `nestjs-telegraf` (Telegram) and `necord` (Discord) — see
-  [`templates/.agents/architecture/transport-adapter.md`](./templates/.agents/architecture/transport-adapter.md).
+  [`templates/.agents/architecture/transport-adapter.md`](./skills/kikita-create-nestjs-app/templates/.agents/architecture/transport-adapter.md).
 - A two-stage pre-init questionnaire (application type/platform first, then tests, auth, queue,
   cache, file uploads, messaging, TSDoc policy, git policy, package manager, git remote) drives
   which docs and config get generated — see `SKILL.md` for why it's staged, not one flat list.
 
 ## Install
 
-This is a skill for AI coding agents (Claude Code, Codex). Installing it means placing this
-repo's contents under a `<skill-name>/` folder inside the agent's skills directory, so the
-folder name matches this repo's name.
+This repo is an [Agent Plugin](https://agent-plugins.org): a `plugin.json` manifest at the
+root plus a `skills/kikita-create-nestjs-app/` directory holding the actual
+[Agent Skill](https://agent-plugins.org/specification). Any Agent-Plugins-compatible client
+can load it straight from a clone of this repo.
+
+### Agent-Plugins-compatible clients (Cursor, GitHub Copilot, ChatGPT/Codex, VS Code, Kiro, …)
+
+Point the client's plugin install flow at this repo (clone URL or local path). The client
+discovers `plugin.json`, then the skill under `skills/kikita-create-nestjs-app/`. Refer to
+your client's own docs for the exact install command — the Agent Plugins spec defines the
+package format, not a universal installer.
 
 ### Claude Code
+
+Claude Code doesn't read the Agent Plugins format natively yet, so install the skill
+subdirectory directly:
 
 **Personal (all your projects):**
 
 ```sh
-git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git ~/.claude/skills/kikita-create-nestjs-app
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git /tmp/kikita-nest-app && \
+  cp -r /tmp/kikita-nest-app/skills/kikita-create-nestjs-app ~/.claude/skills/kikita-create-nestjs-app
 ```
 
 **Project-scoped (this project only, committed to the repo):**
 
 ```sh
-git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git .claude/skills/kikita-create-nestjs-app
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git /tmp/kikita-nest-app && \
+  cp -r /tmp/kikita-nest-app/skills/kikita-create-nestjs-app .claude/skills/kikita-create-nestjs-app
 ```
 
 Claude Code picks up new/changed skills under `~/.claude/skills/` and `.claude/skills/` live,
@@ -54,13 +72,15 @@ didn't exist yet when the session started (in that case restart once).
 **User scope (all your projects):**
 
 ```sh
-git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git "$HOME/.agents/skills/kikita-create-nestjs-app"
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git /tmp/kikita-nest-app && \
+  cp -r /tmp/kikita-nest-app/skills/kikita-create-nestjs-app "$HOME/.agents/skills/kikita-create-nestjs-app"
 ```
 
 **Repo scope (this project, and any subdirectory under it):**
 
 ```sh
-git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git .agents/skills/kikita-create-nestjs-app
+git clone https://github.com/kikita-labs/kikita-create-nestjs-app.git /tmp/kikita-nest-app && \
+  cp -r /tmp/kikita-nest-app/skills/kikita-create-nestjs-app .agents/skills/kikita-create-nestjs-app
 ```
 
 Codex scans `.agents/skills` in the current directory and every parent up to the repo root. If a
@@ -89,12 +109,14 @@ exact same command inside that project:
 
 The skill detects `.agents/.kikita-scaffold.json` (written at scaffold time) and switches to
 update mode instead of re-running the questionnaire: it `git pull`s its own install directory,
-diffs `templates/.agents/` between the commit the project was scaffolded/last-updated from and
-the current `HEAD`, and merges what changed into the project's `.agents/` files — never a blind
-overwrite, since those files usually pick up project-specific edits after scaffolding. See
-[`update.md`](./update.md) for the exact algorithm.
+diffs `skills/kikita-create-nestjs-app/templates/.agents/` between the commit the project was
+scaffolded/last-updated from and the current `HEAD`, and merges what changed into the project's
+`.agents/` files — never a blind overwrite, since those files usually pick up project-specific
+edits after scaffolding. See [`update.md`](./skills/kikita-create-nestjs-app/update.md) for the
+exact algorithm. Note this requires a git-clone install (not a copy) so `<plugin-root>` has
+history to diff against — see `update.md` section 1.
 
-This works the same way whether you're driving Claude Code by hand or a fully agent-driven
+This works the same way whether you're driving the agent by hand or a fully agent-driven
 ("vibecoding") workflow that never opens the project directly — it's the same slash command
 either way, no separate `-update` skill to install or remember.
 
@@ -103,19 +125,22 @@ either way, no separate `-update` skill to install or remember.
 Single deployable app, not a monorepo/Nx workspace and not a distributed microservices topology
 (multiple services/repos). A message broker, if chosen, wires a hybrid setup
 (`app.connectMicroservice()`) inside the same single app — it never spins up a second service.
-See [`templates/.agents/architecture/messaging.md`](./templates/.agents/architecture/messaging.md).
+See [`templates/.agents/architecture/messaging.md`](./skills/kikita-create-nestjs-app/templates/.agents/architecture/messaging.md).
 
 ## Repo structure
 
 ```
-SKILL.md          # skill entry point: mode detection, staged questionnaire + generation rules
-plan.md           # step-by-step init sequence the skill follows
-update.md         # step-by-step sequence for updating an already-scaffolded project
-checklist.md      # post-init verification
-templates/        # everything copied into the generated project
-  AGENTS.md, CLAUDE.md, .gitignore, .editorconfig, .prettierrc, .prettierignore,
-  .nvmrc, .vscode/extensions.json, .env.example, docker-compose.yml
-  .agents/         # the documentation tree template, mirrors what gets generated
+plugin.json         # Agent Plugins manifest (name, version, metadata) — see agent-plugins.org
+skills/
+  kikita-create-nestjs-app/
+    SKILL.md          # skill entry point: mode detection, staged questionnaire + generation rules
+    plan.md           # step-by-step init sequence the skill follows
+    update.md         # step-by-step sequence for updating an already-scaffolded project
+    checklist.md      # post-init verification
+    templates/        # everything copied into the generated project
+      AGENTS.md, CLAUDE.md, .gitignore, .editorconfig, .prettierrc, .prettierignore,
+      .nvmrc, .vscode/extensions.json, .env.example, docker-compose.yml
+      .agents/         # the documentation tree template, mirrors what gets generated
 ```
 
 ## License
