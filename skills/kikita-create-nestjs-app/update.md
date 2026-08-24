@@ -14,14 +14,20 @@ template over a customized file.
 
 ## 1. Locate the skill's own source
 
-The skill is running from wherever the plugin/skill was installed (`~/.claude/skills/kikita-create-nestjs-app`,
-`.claude/skills/kikita-create-nestjs-app`, `~/.agents/skills/...`, `.agents/skills/...`, or,
-for an Agent-Plugins-compatible client, wherever it unpacked the `kikita-create-nestjs-app`
-plugin package — see `README.md`'s Install section). Resolve `<plugin-root>` — the directory
-containing `plugin.json` (a git clone of this repo) — from the currently executing skill's own
-location; don't guess or re-derive it. This skill's own template tree then lives at
-`<plugin-root>/skills/kikita-create-nestjs-app/templates/`.
+The Agent Skills spec has no update mechanism of its own, so this falls back to git. The
+skill is running from wherever it was installed (`~/.claude/skills/kikita-create-nestjs-app`,
+`.claude/skills/kikita-create-nestjs-app`, `~/.agents/skills/...`, `.agents/skills/...`, or an
+equivalent location for another Agent-Skills-compatible client — see `README.md`'s Install
+section). Per that section, the installed skill folder is a symlink/junction into a full git
+clone of this repo, so its `.git` is reachable by walking up from the currently executing
+`SKILL.md`'s own (resolved) location: run `git -C <path-to-running-skill-dir> rev-parse
+--show-toplevel` to get `<plugin-root>`; don't guess or re-derive it another way. This skill's
+own template tree then lives at `<plugin-root>/skills/kikita-create-nestjs-app/templates/`.
 
+- If `git rev-parse --show-toplevel` fails (not inside a git working tree at all) — stop and
+  tell the user: this install was made by copying files instead of cloning (or the link to
+  the clone is broken), so there's no history to diff against; ask them to reinstall per
+  `README.md`'s Install section before retrying the update.
 - `git -C <plugin-root> status --porcelain` — if it reports local changes, stop and tell the user:
   this install has been hand-edited and pulling would risk losing that; ask how they want to
   proceed rather than pulling over it.

@@ -19,8 +19,5 @@ jobs:
           fi
           echo "OK: no Cyrillic content."
 
-      - name: Validate plugin.json
-        run: python3 .github/scripts/check_plugin_json.py
-
       - name: Check for broken relative markdown links
         run: python3 .github/scripts/check_links.py

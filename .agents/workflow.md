@@ -13,21 +13,23 @@ Follow this sequence for any change to this repo.
      See `documentation.md` for placeholder/gate rules before editing here.
    - Install instructions, repo structure, or what the skill does at a glance → root
      `README.md`.
-   - Plugin metadata → `plugin.json`. See `versioning.md` for when `version` must bump.
+   - Skill metadata → `SKILL.md`'s frontmatter (`metadata.version`). See `versioning.md` for
+     when it must bump.
 4. Run the checks in `testing-and-quality.md` locally before pushing.
 5. Commit following `git-policy.md`.
 6. Push the branch and open a PR into `main`. CI must be green before merging.
-7. If `plugin.json`'s `version` was bumped in this change: after the PR merges, tag and
-   release it immediately, same sitting — see `versioning.md`. A version bump without a
+7. If `SKILL.md`'s `metadata.version` was bumped in this change: after the PR merges, tag
+   and release it immediately, same sitting — see `versioning.md`. A version bump without a
    matching tag/release is not done yet.
 
 ## Review Checklist
 
 - [ ] Change made on a feature branch, not directly on `main`.
-- [ ] Correct file touched — skill logic vs template vs `plugin.json` vs README (step 3).
+- [ ] Correct file touched — skill logic vs template vs `SKILL.md` frontmatter vs README
+      (step 3).
 - [ ] No leftover `{{PLACEHOLDER}}` or broken relative link introduced (checked by CI, but
       verify before pushing).
-- [ ] `version` in `plugin.json` bumped if `versioning.md`'s rule says so.
+- [ ] `metadata.version` in `SKILL.md` bumped if `versioning.md`'s rule says so.
 - [ ] If `version` was bumped: tag pushed and GitHub release created after merge (see
       `versioning.md`) — not deferred, not skipped.
 - [ ] Commit message has no AI-attribution line.

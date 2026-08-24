@@ -47,7 +47,7 @@ All under `skills/kikita-create-nestjs-app/`:
   plus `templates/.agents/README.md` if a file was added or removed.
 - Changed install steps, repo structure, or what the skill does at a glance? → root
   `README.md`.
-- Changed `plugin.json` metadata or the package layout? → see `versioning.md`.
+- Changed `SKILL.md`'s frontmatter metadata or the package layout? → see `versioning.md`.
 
 ## Review Checklist
 
