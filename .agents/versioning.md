@@ -1,12 +1,15 @@
 # Versioning
 
-`plugin.json`'s `version` field is the only version signal the Agent Plugins spec defines.
-There's no required changelog file, but every bump **must** get a matching git tag and
-GitHub release — not "when it seems worth it." A `version` bump with no tag is an
-incomplete change, full stop; a bump that ships without one is a bug in the PR that
-introduced it, not a follow-up someone can do "later."
+The [Agent Skills spec](https://agentskills.io/specification) doesn't define a version
+field or an update mechanism — it's just a folder format. `SKILL.md`'s optional `metadata`
+map is the only spec-sanctioned place to record a human-facing version string, and clients
+don't read it automatically. So the real source of truth for this repo's version is git
+itself: every release **must** get a matching git tag and GitHub release — not "when it
+seems worth it." A `metadata.version` bump with no tag is an incomplete change, full stop; a
+bump that ships without one is a bug in the PR that introduced it, not a follow-up someone
+can do "later."
 
-## SemVer meaning for this plugin
+## SemVer meaning for this skill
 
 - **Patch** (`1.0.x`) — wording/typo fixes in `SKILL.md`/`plan.md`/templates, no behavior
   change, no file added or removed.
@@ -19,8 +22,8 @@ introduced it, not a follow-up someone can do "later."
 
 ## How to bump
 
-1. Bump `version` in the same commit as the change that justifies it — never a separate
-   "bump version" commit.
+1. Bump `metadata.version` in `skills/kikita-create-nestjs-app/SKILL.md`'s frontmatter, in
+   the same commit as the change that justifies it — never a separate "bump version" commit.
 2. Get the PR merged into `main` (branch protection requires this anyway).
 3. Immediately after merging — same sitting, not a later session — tag and release the
    merge commit on `main`:
@@ -38,44 +41,24 @@ There is no such thing as a version bump that's "too small to tag." Patch, minor
 every one gets a tag and a release. If a change doesn't feel worth tagging, that's a sign
 it wasn't actually worth a version bump either — reconsider the bump, not the tag.
 
-## Tracking the Agent Plugins spec version itself
+## What actually drives updates: git, not the version string
 
-There are three different "versions" in play here — don't conflate them:
-
-1. **This plugin's own `version`** in `plugin.json` — covered above.
-2. **The Agent Plugins spec version** — pinned via `$schema` in `plugin.json`
-   (`https://agent-plugins.org/schemas/1.0.0/plugin.schema.json`) and in `mcp.json` if one
-   exists. This repo currently targets spec `1.0.0`.
-3. **`.kikita-scaffold.json`'s `scaffoldedFromCommit`** — see below.
-
-The spec itself can release a new major version (`2.0.0`, ...) independently of anything we
-do. Nothing in this repo watches for that automatically — check periodically:
-
-- Spec source of truth: https://github.com/agentplugins/agent-plugins-spec (releases/tags).
-- Overview and guides: https://agent-plugins.org.
-
-When a new spec version appears:
-
-- **Don't bump `$schema` reflexively.** Read that version's changes first — the schema is a
-  closed object (unknown top-level fields are rejected by conformant clients), so a careless
-  bump can make `plugin.json` invalid for clients still validating against `1.0.0`, or drop
-  support for clients that haven't adopted the new spec version yet.
-- Treat a `$schema` bump as its own deliberate change: read the migration notes, update
-  `plugin.json` and `mcp.json` (if present) together — their spec versions must match — run
-  `check_plugin_json.py` locally, and bump this plugin's own `version` as a **major** bump
-  (it changes what clients can load this plugin at all).
-- Do this as a dedicated PR, not bundled with an unrelated content change.
+`metadata.version` is a coarse, human-facing label — nothing in this repo's own tooling
+reads it. `update.md`'s diff/merge logic runs entirely off git: an installed skill is a
+symlink/junction into a real clone of this repo (see `README.md`'s Install section), and
+`update.md` resolves that clone's `.git`, `git pull`s it, and diffs commits — never the
+version string. Tagging still matters because it gives humans (and release notes) a
+meaningful anchor, but a missing tag doesn't break `update.md`; a missing `.git` does.
 
 ## Not to be confused with `.kikita-scaffold.json`
 
 A scaffolded project's `.agents/.kikita-scaffold.json` records `scaffoldedFromCommit` — an
-exact git commit hash, not this plugin's `version`. That's what `update.md` actually diffs
-against; it's per-project and precise. `plugin.json`'s `version` is a coarser, human-facing
-signal for this repo as a whole and plays no role in the diff/merge logic.
+exact git commit hash, not this skill's `metadata.version`. That's what `update.md` actually
+diffs against; it's per-project and precise.
 
 ## Review Checklist
 
-- [ ] `version` bumped if the change is more than a wording fix.
+- [ ] `metadata.version` in `SKILL.md` bumped if the change is more than a wording fix.
 - [ ] Bump is in the same commit as the change, not a follow-up.
 - [ ] Tag `v<version>` pushed to `origin` after the PR merged.
 - [ ] GitHub release created for that tag (`gh release view v<version>` succeeds).

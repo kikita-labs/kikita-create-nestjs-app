@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Instructions for anyone — human or AI agent — working **on this repo**: the
-`kikita-create-nestjs-app` Agent Plugin itself. This is not the same thing as
+`kikita-create-nestjs-app` Agent Skill itself. This is not the same thing as
 [`skills/kikita-create-nestjs-app/templates/AGENTS.md`](./skills/kikita-create-nestjs-app/templates/AGENTS.md),
 which is a *template file* this skill copies into projects it scaffolds — editing that one
 changes what future generated projects look like, not this repo's own rules.
@@ -15,8 +15,8 @@ changes what future generated projects look like, not this repo's own rules.
 
 ## Read when relevant
 
-- [.agents/versioning.md](./.agents/versioning.md) — when and how to bump `plugin.json`'s
-  `version`.
+- [.agents/versioning.md](./.agents/versioning.md) — when and how to bump `SKILL.md`'s
+  `metadata.version` and tag a release.
 - [.agents/testing-and-quality.md](./.agents/testing-and-quality.md) — the CI checks and how
   to run them locally before pushing.
 

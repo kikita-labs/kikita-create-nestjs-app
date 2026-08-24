@@ -1,7 +1,7 @@
 # .agents
 
 Documentation index for maintaining **this repo** (the `kikita-create-nestjs-app` Agent
-Plugin). Not to be confused with
+Skill). Not to be confused with
 [`skills/kikita-create-nestjs-app/templates/.agents/`](../skills/kikita-create-nestjs-app/templates/.agents/README.md),
 the doc-tree *template* this skill generates for downstream NestJS projects — that one
 describes someone else's app, this one describes this repo.
@@ -10,5 +10,6 @@ describes someone else's app, this one describes this repo.
 - [git-policy.md](./git-policy.md) — commit/branch/PR rules.
 - [documentation.md](./documentation.md) — how the skill's files relate, placeholder/gate
   conventions, when to touch what.
-- [versioning.md](./versioning.md) — when and how to bump `plugin.json`'s `version`.
+- [versioning.md](./versioning.md) — when and how to bump `SKILL.md`'s `metadata.version`
+  and tag a release.
 - [testing-and-quality.md](./testing-and-quality.md) — CI checks and how to run them locally.
