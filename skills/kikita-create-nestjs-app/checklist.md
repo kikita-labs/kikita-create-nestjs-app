@@ -96,6 +96,9 @@ genuinely true — do not check a box you didn't verify.
       `typescript-eslint` `strict-type-checked` + `simple-import-sort` +
       `consistent-type-imports` + a restricted-import boundary rule, `eslint-config-prettier`
       last), lints with zero errors on the generated skeleton.
+- [ ] ESLint enforces the decomposition caps from `.agents/testing-and-quality.md`:
+      `max-lines` 400, `max-lines-per-function` 120, `complexity` 15, and `max-depth` 4; no
+      project-wide disable hides an oversized hand-written file.
 - [ ] The `no-restricted-imports` (`@nestjs/mapped-types`, `bcrypt`, `bcryptjs`) and
       `no-restricted-syntax` (`process.env` outside the config schema file) rules from
       `.agents/testing-and-quality.md`'s "Mechanically Enforced Rules" are actually present in
@@ -126,6 +129,9 @@ genuinely true — do not check a box you didn't verify.
       private one-file maps/types local.
 - [ ] Paths were chosen from a responsibility/consumer inventory; a capability was not inferred
       solely from filename prefixes or from the role folders already present.
+- [ ] The per-file gate in `.agents/file-change-review.md` was run after every generated source
+      file; reusable declarations, domain entities, tests, comments, and decomposition decisions
+      were checked rather than inferred from file suffixes.
 - [ ] `lint`, `format`, `format:check` scripts exist and run clean.
 - [ ] `package.json` has `"prepare": "husky"`. Husky installed: `pre-commit` runs `lint-staged`
       + the non-English content check, `pre-push` runs the full lint + format + test gate.
@@ -146,6 +152,8 @@ genuinely true — do not check a box you didn't verify.
 - [ ] `.agents/agent-surface.md` present only if mandatory TSDoc was chosen.
 - [ ] `.agents/documentation.md` (the "how to write/maintain docs" master file) exists and is
       linked from `AGENTS.md`.
+- [ ] `.agents/file-change-review.md` exists, is linked from `.agents/README.md` and `AGENTS.md`,
+      and its gate was applied to every generated source file.
 - [ ] No Cyrillic or mojibake in any tracked file, including TSDoc.
 
 ## Git

@@ -9,6 +9,8 @@ given task; this file is the flat map of everything that exists under `.agents/`
 - [git-policy.md](./git-policy.md) — commit/push rules and authority.
 - [documentation.md](./documentation.md) — how to write and maintain these docs.
 - [testing-and-quality.md](./testing-and-quality.md) — lint/format/test gate.
+- [file-change-review.md](./file-change-review.md) — per-file ownership, decomposition, test, and
+  comment gate to run after every source-file change.
 - [refactoring.md](./refactoring.md) — refactor policy.
 - [progress.md](./progress.md) — dated status log.
 <!-- SCAFFOLD: keep only if mandatory TSDoc was chosen -->

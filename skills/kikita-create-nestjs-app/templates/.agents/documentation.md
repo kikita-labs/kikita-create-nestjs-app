@@ -52,6 +52,9 @@ Concretely, before you consider a change done, ask: did I just —
 - Add a new role (client, builder, state store, registry) or split a grab-bag constants/utility
   file? → document the responsibility-first classification rule and its allowed scope before
   adding another role folder.
+- Create, change, move, or delete a source file? → run `.agents/file-change-review.md` for that
+  file. Update this documentation set too if the change introduces a new placement, decomposition,
+  testing, or comment convention.
 - Still unsure whether a change needs a doc update? It probably does — check the relevant
   README before skipping it.
 

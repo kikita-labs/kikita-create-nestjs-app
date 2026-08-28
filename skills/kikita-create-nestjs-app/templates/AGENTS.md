@@ -14,6 +14,7 @@ Always read:
 - `.agents/git-policy.md`
 - `.agents/documentation.md`
 - `.agents/testing-and-quality.md`
+- `.agents/file-change-review.md`
 - `.agents/code-style/README.md`
 - `.agents/architecture/README.md`
 
@@ -35,7 +36,7 @@ strategy), also read:
 
 - Latest stable NestJS only. Modules by feature (`src/modules/<feature>/`), not by technical
   layer — see `.agents/architecture/folder-structure.md`. Every file type (guard, interceptor,
-  filter, decorator, middleware, exception, interface, enum, constant, utility) has exactly one
+  filter, decorator, middleware, exception, interface, entity, enum, constant, utility) has exactly one
   correct folder per that file's table — never invent an ad hoc top-level folder for something
   it already covers.
 - A feature root is not an unlimited flat bucket: keep it to the module, primary transport/
@@ -44,6 +45,9 @@ strategy), also read:
   infrastructure wrappers — a domain such as `legal` belongs under `src/modules/legal/`. Choose
   paths from responsibility and consumers, not from whichever role folders already exist or from
   a filename prefix; `@Global()` changes DI visibility, not domain ownership.
+- After every source-file create/change/move, run `.agents/file-change-review.md` before reporting
+  the task complete. A hand-written file over 400 non-blank, non-comment lines or a function over
+  120 such lines is a blocking decomposition failure, not a style suggestion.
 - Every dependency this project installs — Prisma, `nestjs-pino`, `nestjs-i18n`, the bot
   platform library, everything — is latest stable at install time, same rule as NestJS itself.
   A library's major-version API can change shape between scaffolds of this skill (Prisma has,

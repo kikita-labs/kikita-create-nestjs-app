@@ -27,6 +27,11 @@ Before writing a feature, make a short responsibility inventory: capability, rol
 visibility, and target path for each file. Do not treat the existing folder list as an architecture
 or use `@Global()` as a reason to place domain code under `src/core/`.
 
+Before every source-file create/change/move in these steps, also re-read
+`templates/.agents/file-change-review.md`, write its ownership/consumer/path inventory, and run
+its gate immediately after that file is written. A file over 400 non-blank, non-comment lines or a
+function over 120 such lines must be split before the scaffold is reported complete.
+
 1. **Ask the questionnaire** (`SKILL.md` section 1). Do not proceed until every answer is
    recorded.
 
@@ -303,7 +308,8 @@ or use `@Global()` as a reason to place domain code under `src/core/`.
     - `.agents/README.md` — flat index, kept in sync with whichever conditional files actually
       got generated.
     - `.agents/*.md` flat topic docs (workflow, git-policy, documentation, testing-and-quality,
-      refactoring, progress — always include all of these) plus `agent-surface.md` only if
+      file-change-review, refactoring, progress — always include all of these) plus
+      `agent-surface.md` only if
       mandatory TSDoc was chosen.
     - `.agents/code-style/` with its `README.md` hub + `imports.md`, `provider-structure.md`,
       `dto-and-validation.md`, `module-structure.md`.

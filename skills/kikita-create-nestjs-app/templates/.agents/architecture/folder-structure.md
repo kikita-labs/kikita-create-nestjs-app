@@ -86,6 +86,8 @@ src/
       dto/              create-user.dto.ts, update-user.dto.ts, user-response.dto.ts
       interfaces/                 <- only if this feature has 2+ reusable interfaces; a single
                                      one-off type stays inline in the file that uses it
+      entities/                   <- only for domain entities that own invariants or behavior;
+                                     do not create entities just to mirror Prisma models
       constants/                  <- only if this feature has a reusable constant/lookup table
       guards/                     <- only if this feature has a guard nothing else needs
       reports/                    <- sub-resource subfolder: a route prefix that split off the
@@ -226,6 +228,7 @@ detail.
 | Param/method decorator | `.decorator.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/decorators/` |
 | Custom exception | `.exception.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/exceptions/` |
 | Interface/type | `.interface.ts` | `modules/<feature>/interfaces/` or `modules/<feature>/<capability>/interfaces/` (2+ reusable) or inline (1-off) | `common/interfaces/` |
+| Domain entity | `.entity.ts` | `modules/<feature>/entities/` or `modules/<feature>/<capability>/entities/` when it owns domain behavior | — (keep persistence models in Prisma/its owning adapter) |
 | Enum | `.enum.ts` | `modules/<feature>/enums/` or `modules/<feature>/<capability>/enums/` | `common/enums/` |
 | Constant | `.constant.ts` | `modules/<feature>/constants/` or `modules/<feature>/<capability>/constants/` | `common/constants/` |
 | Utility function | `.util.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/utilities/` (zero `@nestjs/*` imports) |
