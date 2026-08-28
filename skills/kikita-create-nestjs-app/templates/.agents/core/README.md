@@ -5,6 +5,11 @@ app and usually wrap external state/connections (a DB client, a broker connectio
 client). Not a dumping ground for "things that didn't fit elsewhere" — see
 `../architecture/folder-structure.md` for the boundary between `core/` and `common/`.
 
+`core/<name>/` is a single infrastructure boundary, not a domain-feature folder. A provider
+that coordinates legal rules, user actions, reports, or another business capability belongs
+under `src/modules/<feature>/`, even if it is used by more than one transport. Only a genuinely
+app-wide singleton or infrastructure wrapper belongs here.
+
 ## Registry
 
 | Name | Kind | Path | Doc | Summary |

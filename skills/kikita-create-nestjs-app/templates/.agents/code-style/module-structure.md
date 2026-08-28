@@ -23,6 +23,39 @@ export class UsersModule {}
 4. `exports` — the module's public surface, see `../architecture/module-boundaries.md`. Only
    list what another module is actually meant to consume.
 
+## Keep feature roots small
+
+The module file is the composition root, not a reason to keep every provider with the same
+prefix in one directory. Keep the owning feature root for its module, primary controller/service,
+and feature-wide declarations. Once the root would exceed six production `.ts` files, or once it
+contains two distinct capabilities, create named capability folders and keep each capability
+vertically cohesive. Register those providers in the owning feature module:
+
+```
+modules/legal/
+  legal.module.ts
+  legal.controller.ts
+  legal.service.ts
+  interactions/
+    guards/
+      legal-interaction.guard.ts
+    clients/
+      legal-status.client.ts
+    builders/
+      legal-modal.builder.ts
+    state/
+      pending-legal-action.store.ts
+  metrics/
+    legal-metrics.service.ts
+```
+
+The filenames may retain the feature prefix for searchability, but the paths express ownership.
+Do not create `services/`, `controllers/`, or `misc/` just to make a large folder look organized;
+name the folder after the business capability. A nested folder does not become a separate Nest
+module unless it has a real `*.module.ts` boundary. A provider used by the whole application
+belongs in `core/` only when it is a true app-wide singleton, never because the feature folder
+became crowded.
+
 ## Multiple controllers per module (sub-resources)
 
 A feature's REST surface is not required to live in one `<feature>.controller.ts` — `controllers`
@@ -182,6 +215,8 @@ export class AppModule {}
 ## Review Checklist
 
 - [ ] `@Module()` fields in the order above; empty keys omitted rather than left as `[]`.
+- [ ] Feature roots stay within the six-production-file threshold or split into named,
+      vertically cohesive capabilities.
 - [ ] Module file sits at the top of its feature folder.
 - [ ] `AppModule` only imports — no stray providers/controllers of its own, and no inline
       `forRootAsync()`/`forRoot()` factory calls; each has its own `core/<name>/` wrapper.

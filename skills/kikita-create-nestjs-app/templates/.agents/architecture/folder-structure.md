@@ -1,11 +1,13 @@
 # Folder Structure
 
-Feature-based, not layer-based: a module owns everything it needs (controller/update-handler,
-service, DTOs, guards, its own spec files) in one folder. Never split by technical layer at the
-top level (no `src/controllers/`, `src/services/`, `src/dtos/` siblings). Every file type used
-in this project has exactly one correct home — this section is the exhaustive map, not a partial
-example. If a new file doesn't obviously fit a row below, that's a signal to stop and ask, not to
-invent a new top-level folder.
+Feature-based, not layer-based: a small module owns everything it needs (controller/update-handler,
+service, DTOs, guards, and its own spec files) in one dedicated feature folder. This does not
+mean that a large feature becomes one flat directory. Keep the feature root for its composition
+files and split distinct capabilities into named child folders as the feature grows. Never split
+the application into technical layer folders at the top level (no `src/controllers/`,
+`src/services/`, or `src/dtos/` siblings). Every file type used in this project has exactly one
+correct home — this section is the exhaustive map, not a partial example. If a new file doesn't
+obviously fit a row below, that's a signal to stop and ask, not to invent a new top-level folder.
 
 ```
 src/
@@ -96,6 +98,17 @@ src/
         dto/
           user-report-response.dto.ts
       users.service.spec.ts
+      interactions/                <- a named capability, not a generic services/ bucket
+        user-interactions.controller.ts
+        user-interactions.service.ts
+        dto/
+          create-user-interaction.dto.ts
+        clients/
+          user-status.client.ts
+        builders/
+          user-modal.builder.ts
+        state/
+          pending-user-action.store.ts
   <!-- SCAFFOLD: keep only if bot or both was chosen -->
   bot/
     bot.module.ts
@@ -107,37 +120,72 @@ prisma/
 test/                             <!-- SCAFFOLD: keep only if e2e tests were chosen -->
 ```
 
+## Feature roots and capability folders
+
+Nest's official feature-module example keeps a small feature's module, controller, and service
+together, with `dto/` and `interfaces/` below it. Follow that shape while the feature is small.
+Use these rules when it grows:
+
+- Keep `modules/<feature>/` for the feature module, its primary controller/service, and files
+  shared by the whole feature.
+- Treat **six production `.ts` files at the feature root** as the maximum. Count `.module.ts`,
+  controllers, providers, clients, builders, stores, and other runtime files; do not count
+  nested files or `.spec.ts` files. Split earlier when the root already contains two distinct
+  capabilities. This is a review threshold, not a NestJS framework limit.
+- Name a child folder after the business capability or sub-resource (`reports/`, `interactions/`,
+  `billing/`, `webhooks/`), then keep that capability vertically cohesive: its controller,
+  providers, DTOs, adapters, clients, builders, state, and tests stay together.
+- A capability folder may use the recognized subfolders in the table below. Never create generic
+  technical buckets such as `services/`, `controllers/`, `dtos/`, `utils/`, `types/`, or `misc/`.
+- Register capability providers in the owning feature module. Add a nested `*.module.ts` only
+  when that capability has a real Nest module boundary; a folder alone is an organizational
+  boundary, not a second deployable service.
+- Apply the same rule to `core/<name>/`: it is for one app-wide infrastructure singleton or
+  wrapper, not a place to hide a domain feature. For example, legal business logic belongs under
+  `src/modules/legal/`, not `src/core/legal/`; a legal status client belongs in the relevant
+  `modules/legal/<capability>/` folder unless it is truly shared by the whole application.
+
+Do not flatten a feature merely because every class shares the same filename prefix. A folder
+containing a registry, metrics provider, external client, modal builder, interaction guard, and
+pending-action store already has several responsibilities and must be split by capability.
+
 ## File-type → folder, quick lookup
 
 | File type | Suffix | Feature-specific home | Cross-feature home |
 | --- | --- | --- | --- |
-| Controller | `.controller.ts` | `modules/<feature>/` | — (controllers are never cross-feature) |
-| Service | `.service.ts` | `modules/<feature>/` | `core/<name>/` if it's a true app-wide singleton |
-| Module | `.module.ts` | `modules/<feature>/` | `core/<name>/` |
-| DTO | `.dto.ts` | `modules/<feature>/dto/` | — |
+| Controller | `.controller.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` | — (controllers are never cross-feature) |
+| Service | `.service.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` | `core/<name>/` if it's a true app-wide singleton |
+| Module | `.module.ts` | `modules/<feature>/` or a real nested capability module | `core/<name>/` |
+| DTO | `.dto.ts` | `modules/<feature>/dto/` or `modules/<feature>/<capability>/dto/` | — |
 | Bot update handler | `.update.ts` | `bot/updates/` | — |
 | Bot scene | `.scene.ts` | `bot/scenes/` | — |
-| Queue processor | `.processor.ts` | `modules/<feature>/` (owning feature) | — |
+| Queue processor | `.processor.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` (owning feature) | — |
 | Passport strategy | `.strategy.ts` | — | `core/auth/strategies/` |
-| Pipe | `.pipe.ts` | `modules/<feature>/` if feature-only | `common/pipes/` |
-| Filter | `.filter.ts` | `modules/<feature>/` if feature-only | `common/filters/` |
-| Interceptor | `.interceptor.ts` | `modules/<feature>/` if feature-only | `common/interceptors/` |
-| Guard | `.guard.ts` | `modules/<feature>/guards/` | `common/guards/` or `core/auth/guards/` |
+| Pipe | `.pipe.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/pipes/` |
+| Filter | `.filter.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/filters/` |
+| Interceptor | `.interceptor.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/interceptors/` |
+| Guard | `.guard.ts` | `modules/<feature>/guards/` or `modules/<feature>/<capability>/guards/` | `common/guards/` or `core/auth/guards/` |
 | Middleware | `.middleware.ts` | — (middleware is applied app-wide or per-module in `configure()`) | `common/middleware/` |
-| Param/method decorator | `.decorator.ts` | `modules/<feature>/` if feature-only | `common/decorators/` |
-| Custom exception | `.exception.ts` | `modules/<feature>/` if feature-only | `common/exceptions/` |
-| Interface/type | `.interface.ts` | `modules/<feature>/interfaces/` (2+ reusable) or inline (1-off) | `common/interfaces/` |
-| Enum | `.enum.ts` | `modules/<feature>/enums/` | `common/enums/` |
-| Constant | `.constant.ts` | `modules/<feature>/constants/` | `common/constants/` |
-| Utility function | `.util.ts` | `modules/<feature>/` if feature-only | `common/utilities/` (zero `@nestjs/*` imports) |
+| Param/method decorator | `.decorator.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/decorators/` |
+| Custom exception | `.exception.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/exceptions/` |
+| Interface/type | `.interface.ts` | `modules/<feature>/interfaces/` or `modules/<feature>/<capability>/interfaces/` (2+ reusable) or inline (1-off) | `common/interfaces/` |
+| Enum | `.enum.ts` | `modules/<feature>/enums/` or `modules/<feature>/<capability>/enums/` | `common/enums/` |
+| Constant | `.constant.ts` | `modules/<feature>/constants/` or `modules/<feature>/<capability>/constants/` | `common/constants/` |
+| Utility function | `.util.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/utilities/` (zero `@nestjs/*` imports) |
 | Test | `.spec.ts` | next to the file under test | next to the file under test |
-| Storage adapter | `.adapter.ts` | — | `core/storage/` |
+| Adapter | `.adapter.ts` | `modules/<feature>/<capability>/adapters/` | `core/<name>/` if app-wide; `core/storage/` for the storage feature |
+| External client | `.client.ts` | `modules/<feature>/<capability>/clients/` | `core/<name>/` only if app-wide |
+| Builder/factory | `.builder.ts` / `.factory.ts` | `modules/<feature>/<capability>/builders/` or the capability root | `common/utilities/` only when framework-agnostic |
+| State store | `.store.ts` | `modules/<feature>/<capability>/state/` | `core/<name>/` only if app-wide |
+| Registry | `.registry.ts` | `modules/<feature>/<capability>/` | `core/<name>/` only if app-wide |
 | Health indicator | `.health-indicator.ts` | — | `core/health/indicators/` |
 
 A file moves from a feature's own subfolder to the matching `common/` folder the moment a
 **second** feature needs it — not preemptively. Don't create an empty `interfaces/`/`enums/`/
 `constants/`/`guards/` subfolder in a feature that has nothing to put in it yet — create the
-subfolder in the same commit as the first file that actually belongs there.
+subfolder in the same commit as the first file that actually belongs there. If two capabilities in
+the same feature need a declaration, promote it to the feature-level matching folder before
+promoting it to `common/`.
 
 ## No inline reusable declarations
 
@@ -171,6 +219,10 @@ REST and bot transports when both are chosen. See `transport-adapter.md`.
 
 - [ ] No top-level `controllers/`/`services/`/`dtos/` layer folders — everything grouped by
       feature under `modules/`.
+- [ ] No business/domain feature lives under `core/`; every `core/<name>/` entry is a registered
+      app-wide singleton or infrastructure wrapper.
+- [ ] No feature root exceeds six production `.ts` files or mixes distinct capabilities without
+      named child folders; no generic `services/`/`utils/`/`misc/` bucket hides the split.
 - [ ] Every file placed per the file-type table above — no ad hoc top-level folder invented for
       a file type already covered by the table.
 - [ ] No reusable `interface`/`enum`/exported `const` left inline — moved to the matching

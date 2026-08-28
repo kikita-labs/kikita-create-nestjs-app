@@ -22,6 +22,8 @@ the post-init verification it runs before handing the project back to you.
   (`class-validator`/`class-transformer`), Zod-validated env config, `nestjs-pino` structured
   logging, ESLint (`@darraghor/eslint-plugin-nestjs-typed`) + Prettier + Husky pre-wired, a local
   `docker-compose.yml` (Postgres always, Redis/RabbitMQ if the matching feature was chosen).
+- A feature-based `src/` layout: small features stay together, large features split into named
+  capability folders, and `src/core/` remains reserved for app-wide singleton infrastructure.
 - REST branch: Swagger at `/docs`, URI versioning (`/v1/...`), env-driven CORS allowlist.
 - Bot branch: generic Update-handler transport pattern, with concrete adapters for
   `nestjs-telegraf` (Telegram) and `necord` (Discord) — see

@@ -38,6 +38,10 @@ strategy), also read:
   filter, decorator, middleware, exception, interface, enum, constant, utility) has exactly one
   correct folder per that file's table — never invent an ad hoc top-level folder for something
   it already covers.
+- A feature root is not an unlimited flat bucket: keep it to the module, primary transport/
+  service, and feature-wide declarations; split a large feature into named capability folders at
+  the six-production-file threshold. `src/core/` is only for app-wide singletons and
+  infrastructure wrappers — a domain such as `legal` belongs under `src/modules/legal/`.
 - Every dependency this project installs — Prisma, `nestjs-pino`, `nestjs-i18n`, the bot
   platform library, everything — is latest stable at install time, same rule as NestJS itself.
   A library's major-version API can change shape between scaffolds of this skill (Prisma has,

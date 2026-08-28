@@ -107,9 +107,11 @@ genuinely true — do not check a box you didn't verify.
       seeing it actually flagged. A clean `lint` run alone does not prove this rule is configured
       correctly, since the plugin lints clean either way.
 - [ ] Every file actually generated matches `folder-structure.md`'s file-type table: no file
-      suffix invented outside that table (no `*.types.ts`, no ad hoc top-level folder); every
+      suffix invented outside that table (no `*.types.ts`, no ad hoc top-level folder); no domain
+      feature is hidden under `src/core/`; every
       `core/*.md`-documented singleton (auth, queue, cache, storage, i18n) lives under
-      `src/core/<name>/`, never under `src/modules/`; storage adapter files use the `.adapter.ts`
+      `src/core/<name>/`, never under `src/modules/`; feature roots stay within the six production
+      `.ts` file threshold or use named capability folders; storage adapter files use the `.adapter.ts`
       suffix `core/storage.md` specifies, not `.service.ts`.
 - [ ] No `interface`/`type`/`enum`/exported `const` imported by more than one file still sits
       inline in a `.controller.ts`/`.service.ts`/flat feature file — grep each generated feature

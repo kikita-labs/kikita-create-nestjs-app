@@ -14,7 +14,15 @@ file suffix that isn't in `folder-structure.md`'s file-type table (no `*.types.t
 `*.constant.ts`/`*.interface.ts` per that table), and never place a `core/*.md`-documented
 singleton (auth, queue, cache, storage, i18n) under `src/modules/` — every one of those belongs
 under `src/core/<name>/`, listed in `core/README.md`'s registry, even when the step text below
-doesn't repeat the full path.
+doesn't repeat the full path. Conversely, never put a business/domain feature under `src/core/`
+just because it has many providers; use `src/modules/<feature>/` and split large features into
+named capability folders per `folder-structure.md`.
+
+"Feature-based" does not mean "one flat folder per feature." Keep a feature root for its module,
+primary transport/service, and feature-wide declarations. Once it would exceed six production
+`.ts` files, or once it contains two distinct capabilities, create named child folders and keep
+their providers, clients, builders, state, DTOs, and tests together. Register them in the owning
+feature module; do not create generic `services/`, `controllers/`, `utils/`, or `misc/` buckets.
 
 1. **Ask the questionnaire** (`SKILL.md` section 1). Do not proceed until every answer is
    recorded.
@@ -173,10 +181,10 @@ doesn't repeat the full path.
    **under `src/core/auth/`** — auth is an app-wide singleton like Prisma/Health, never a
    `src/modules/*` feature, even though it has a controller and DTOs the way a feature does; see
    `folder-structure.md`'s scaffold tree and `core/README.md`'s registry for the exact layout
-   (`auth.controller.ts`, `auth.service.ts`, `auth.module.ts` flat, plus `guards/`, `strategies/`,
-   `decorators/`, `dto/` subfolders — any extra auth-only service, e.g. an OAuth-provider
-   exchange service, sits flat alongside `auth.service.ts` in that same folder, not in
-   `src/modules/`). Install `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `argon2`,
+   (`auth.controller.ts`, `auth.service.ts`, `auth.module.ts` at the root, plus `guards/`,
+   `strategies/`, `decorators/`, and `dto/` subfolders). Keep additional auth capabilities in
+   named child folders once the feature-layout threshold is reached; do not let auth become a
+   flat pile of unrelated providers. Install `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `argon2`,
    `cookie-parser`, `csrf-csrf`. Access token short-lived, returned in the response body. Refresh
    token httpOnly cookie scoped to `/auth/refresh`, rotated on every use (hash stored in
    `RefreshToken` Prisma model, previous hash invalidated). `RolesGuard` + a `@Roles()` decorator.
@@ -197,8 +205,8 @@ doesn't repeat the full path.
     build the storage adapter under `src/core/storage/` exactly as `core/storage.md` names it —
     `storage.interface.ts` (`StorageAdapter` interface), `local-storage.adapter.ts`
     (`LocalStorageAdapter`), `s3-storage.adapter.ts` (`S3StorageAdapter`), `storage.module.ts`.
-    The `.adapter.ts` suffix is deliberate (matches `folder-structure.md`'s file-type table row
-    for "Storage adapter") — don't rename to `.service.ts`/`*Service`, even though it's a
+    The `.adapter.ts` suffix is deliberate (matches `folder-structure.md`'s `Adapter` row) —
+    don't rename to `.service.ts`/`*Service`, even though it's a
     `@Injectable()` like every other provider. Multer configured with `memoryStorage()` and
     `limits` (`fileSize`, `files`), MIME-type whitelist in a custom pipe.
 
