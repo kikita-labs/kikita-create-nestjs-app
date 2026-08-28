@@ -7,8 +7,12 @@ client). Not a dumping ground for "things that didn't fit elsewhere" — see
 
 `core/<name>/` is a single infrastructure boundary, not a domain-feature folder. A provider
 that coordinates legal rules, user actions, reports, or another business capability belongs
-under `src/modules/<feature>/`, even if it is used by more than one transport. Only a genuinely
-app-wide singleton or infrastructure wrapper belongs here.
+under `src/modules/<feature>/`, even if it is used by more than one transport or has one singleton
+instance. `@Global()` only changes DI visibility; it is not evidence that a provider belongs in
+`core/`. Use a global module for shared infrastructure sparingly and prefer explicit imports for
+domain modules. If a legacy domain module remains here temporarily, mark the registry row as a
+documented deviation and record `src/modules/<feature>/` as its migration target; do not present
+the placement as the preferred architecture.
 
 ## Registry
 

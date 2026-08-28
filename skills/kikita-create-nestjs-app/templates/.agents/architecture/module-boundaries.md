@@ -27,6 +27,10 @@ export class UsersModule {}
 - Code in one top-level feature must not reach into another feature's capability folders or
   private files. Expose a narrow provider from the owning feature module, or move genuinely
   cross-feature logic to `common/` or a true app-wide `core/` singleton.
+- `@Global()` controls provider visibility, not ownership. A business feature remains under
+  `modules/<feature>/` even if several transports use one singleton instance; do not move it to
+  `core/` merely to avoid explicit imports. Use `@Global()` sparingly and prefer an explicit
+  module import when it keeps the dependency graph clear.
 - `core/` providers (Prisma, auth, logger, queue, cache, storage) are typically global
   (`@Global()` module or re-exported from `AppModule`) — every feature module can inject them
   without explicitly importing the core module, since they're true app-wide singletons. Don't
@@ -43,4 +47,5 @@ export class UsersModule {}
 - [ ] No cross-feature import reaches into a capability folder or other private implementation
       path.
 - [ ] No new `forwardRef()` without a comment explaining why the cycle exists.
-- [ ] Nothing under `modules/*` is marked `@Global()`.
+- [ ] Nothing under `modules/*` is marked `@Global()` unless an ADR explicitly justifies a
+      temporary or exceptional domain-wide visibility requirement.

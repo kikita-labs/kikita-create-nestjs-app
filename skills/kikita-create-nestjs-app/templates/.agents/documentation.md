@@ -49,6 +49,9 @@ Concretely, before you consider a change done, ask: did I just —
 - Change feature placement or decomposition — for example, move a domain feature out of
   `core/`, split an over-flat feature into named capabilities, or add a recognized file suffix —
   → update `architecture/folder-structure.md` and `code-style/module-structure.md` together.
+- Add a new role (client, builder, state store, registry) or split a grab-bag constants/utility
+  file? → document the responsibility-first classification rule and its allowed scope before
+  adding another role folder.
 - Still unsure whether a change needs a doc update? It probably does — check the relevant
   README before skipping it.
 

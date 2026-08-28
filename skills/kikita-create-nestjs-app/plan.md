@@ -23,6 +23,9 @@ primary transport/service, and feature-wide declarations. Once it would exceed s
 `.ts` files, or once it contains two distinct capabilities, create named child folders and keep
 their providers, clients, builders, state, DTOs, and tests together. Register them in the owning
 feature module; do not create generic `services/`, `controllers/`, `utils/`, or `misc/` buckets.
+Before writing a feature, make a short responsibility inventory: capability, role, consumers,
+visibility, and target path for each file. Do not treat the existing folder list as an architecture
+or use `@Global()` as a reason to place domain code under `src/core/`.
 
 1. **Ask the questionnaire** (`SKILL.md` section 1). Do not proceed until every answer is
    recorded.

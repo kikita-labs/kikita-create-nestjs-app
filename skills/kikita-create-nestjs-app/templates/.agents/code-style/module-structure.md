@@ -23,6 +23,27 @@ export class UsersModule {}
 4. `exports` — the module's public surface, see `../architecture/module-boundaries.md`. Only
    list what another module is actually meant to consume.
 
+## Classify before choosing a path
+
+Do not choose a path from the folders that happen to exist or from a filename prefix. For every
+new or moved file, answer these questions in order:
+
+1. Which business capability owns the behavior?
+2. What role does the file play: transport handler, provider, client, builder, state store,
+   guard, utility, or type/constant?
+3. Which files consume it, and is it private to one capability, shared by the feature, or shared
+   across features?
+4. Which smallest vertical slice keeps the behavior and its tests together?
+
+The suffix and folder must agree with that classification. A `.builder.ts` file does not belong in
+`builders/` automatically, and a `.util.ts` file does not belong in a generic `utilities/` folder
+automatically. One builder/client/store may sit beside its related flow; role subfolders are for
+multiple related files or a genuine subsystem. Shared exported contracts go in a scoped
+`interfaces/`, `enums/`, or `constants/` folder; private one-file declarations stay private.
+Do not split one workflow into role folders just because the role names are familiar: a modal
+builder, modal update handler, guard, status client, and pending-action store can be one
+`acceptance/` slice, with `acceptance/guards/` only if the guard placement improves clarity.
+
 ## Keep feature roots small
 
 The module file is the composition root, not a reason to keep every provider with the same
@@ -30,6 +51,10 @@ prefix in one directory. Keep the owning feature root for its module, primary co
 and feature-wide declarations. Once the root would exceed six production `.ts` files, or once it
 contains two distinct capabilities, create named capability folders and keep each capability
 vertically cohesive. Register those providers in the owning feature module:
+
+`<feature>.module.ts` and `<feature>.module.spec.ts` stay at the feature root. Keep
+`<feature>.controller.ts` and `<feature>.service.ts` there too when they are the primary transport
+and application service; move only additional capabilities into child folders.
 
 ```
 modules/legal/

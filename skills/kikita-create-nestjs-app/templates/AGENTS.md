@@ -41,7 +41,9 @@ strategy), also read:
 - A feature root is not an unlimited flat bucket: keep it to the module, primary transport/
   service, and feature-wide declarations; split a large feature into named capability folders at
   the six-production-file threshold. `src/core/` is only for app-wide singletons and
-  infrastructure wrappers — a domain such as `legal` belongs under `src/modules/legal/`.
+  infrastructure wrappers — a domain such as `legal` belongs under `src/modules/legal/`. Choose
+  paths from responsibility and consumers, not from whichever role folders already exist or from
+  a filename prefix; `@Global()` changes DI visibility, not domain ownership.
 - Every dependency this project installs — Prisma, `nestjs-pino`, `nestjs-i18n`, the bot
   platform library, everything — is latest stable at install time, same rule as NestJS itself.
   A library's major-version API can change shape between scaffolds of this skill (Prisma has,

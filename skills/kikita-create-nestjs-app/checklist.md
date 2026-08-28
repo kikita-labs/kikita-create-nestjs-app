@@ -118,6 +118,14 @@ genuinely true — do not check a box you didn't verify.
       folder for cross-file imports of a locally-declared symbol and confirm anything reused
       moved to the matching `interfaces/`/`enums/`/`constants/` subfolder per
       `folder-structure.md`'s "No inline reusable declarations".
+- [ ] Every feature-specific utility is grouped by the responsibility it serves (for example,
+      `errors/`), not placed in a generic `utilities/` bucket; a `.util.ts` contains utility
+      functions and private implementation details, not Nest providers or unrelated constants.
+- [ ] No grab-bag `<feature>.constants.ts` combines unrelated constant families; split shared
+      action, error, metric, modal, and lifecycle constants into cohesive files, while keeping
+      private one-file maps/types local.
+- [ ] Paths were chosen from a responsibility/consumer inventory; a capability was not inferred
+      solely from filename prefixes or from the role folders already present.
 - [ ] `lint`, `format`, `format:check` scripts exist and run clean.
 - [ ] `package.json` has `"prepare": "husky"`. Husky installed: `pre-commit` runs `lint-staged`
       + the non-English content check, `pre-push` runs the full lint + format + test gate.

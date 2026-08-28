@@ -126,6 +126,12 @@ Nest's official feature-module example keeps a small feature's module, controlle
 together, with `dto/` and `interfaces/` below it. Follow that shape while the feature is small.
 Use these rules when it grows:
 
+- Classify before choosing a path. First identify the business capability, then the file's role
+  (controller, provider, client, builder, store, guard, or type), then its visibility and
+  consumers. The filename suffix describes the role; it does not decide the folder by itself.
+- A folder list is not a design. Do not create a file merely to fill `constants/`, `interfaces/`,
+  or another familiar folder. Start with the dependency/consumer graph and choose the smallest
+  cohesive vertical slice that owns the behavior.
 - Keep `modules/<feature>/` for the feature module, its primary controller/service, and files
   shared by the whole feature.
 - Treat **six production `.ts` files at the feature root** as the maximum. Count `.module.ts`,
@@ -135,8 +141,14 @@ Use these rules when it grows:
 - Name a child folder after the business capability or sub-resource (`reports/`, `interactions/`,
   `billing/`, `webhooks/`), then keep that capability vertically cohesive: its controller,
   providers, DTOs, adapters, clients, builders, state, and tests stay together.
-- A capability folder may use the recognized subfolders in the table below. Never create generic
-  technical buckets such as `services/`, `controllers/`, `dtos/`, `utils/`, `types/`, or `misc/`.
+- A capability folder may use the recognized subfolders in the table below, but role folders are
+  optional. Keep one client, builder, store, or registry beside the related flow when that is the
+  clearest ownership; create `clients/`, `builders/`, or `state/` only when there are multiple
+  related files or a real subsystem boundary. Never create generic technical buckets such as
+  `services/`, `controllers/`, `dtos/`, `utils/`, `types/`, or `misc/`.
+- Treat `constants/` the same way: keep one file per cohesive constant family, not one file per
+  constant and not one giant `<feature>.constants.ts` grab bag. Split independent action, error,
+  metrics, modal, or lifecycle families into separate files when their consumers differ.
 - Register capability providers in the owning feature module. Add a nested `*.module.ts` only
   when that capability has a real Nest module boundary; a folder alone is an organizational
   boundary, not a second deployable service.
@@ -147,7 +159,52 @@ Use these rules when it grows:
 
 Do not flatten a feature merely because every class shares the same filename prefix. A folder
 containing a registry, metrics provider, external client, modal builder, interaction guard, and
-pending-action store already has several responsibilities and must be split by capability.
+pending-action store already has several responsibilities and must be split by capability. Group
+files that participate in one workflow together even when their suffixes differ; a modal builder,
+modal update handler, interaction guard, status client, and pending-action store may all belong in
+one `acceptance/` capability, with only the guard in `acceptance/guards/` if that makes its Nest
+role clearer.
+
+For a legal acceptance flow like the one shown in this project's examples, a reasonable target is:
+
+```
+modules/legal/
+  legal.module.ts
+  legal.module.spec.ts
+  constants/                    <- one cohesive file per constant family, not one file per value
+    legal-action.constants.ts
+    legal-error-code.constants.ts
+    legal-metrics.constants.ts
+    legal-modal.constants.ts
+    legal-pending-action.constants.ts
+    legal-status.constants.ts
+  actions/
+    legal-action.decorator.ts
+    legal-action-registry.service.ts
+    interfaces/
+      legal-action-adapter.interface.ts
+  acceptance/
+    legal-modal.builder.ts
+    legal-modal.update.ts
+    legal-status.client.ts
+    pending-legal-action.store.ts
+    interfaces/
+      pending-legal-action.interface.ts
+    guards/
+      legal-interaction.guard.ts
+  errors/
+    legal-error-code.util.ts
+  metrics/
+    legal-metrics.service.ts
+    interfaces/
+      legal-metric-snapshot.interface.ts
+```
+
+Keep `legal-metric-snapshot.interface.ts` inline in `legal-metrics.service.ts` if it has only one
+consumer and is not part of the capability's public API. Keep private maps and private helper
+types inside `legal-error-code.util.ts` when no other file consumes them. Move a declaration out
+when another file imports it, or when it represents a public contract rather than an implementation
+detail.
 
 ## File-type → folder, quick lookup
 
@@ -173,10 +230,10 @@ pending-action store already has several responsibilities and must be split by c
 | Constant | `.constant.ts` | `modules/<feature>/constants/` or `modules/<feature>/<capability>/constants/` | `common/constants/` |
 | Utility function | `.util.ts` | `modules/<feature>/` or `modules/<feature>/<capability>/` if feature-only | `common/utilities/` (zero `@nestjs/*` imports) |
 | Test | `.spec.ts` | next to the file under test | next to the file under test |
-| Adapter | `.adapter.ts` | `modules/<feature>/<capability>/adapters/` | `core/<name>/` if app-wide; `core/storage/` for the storage feature |
-| External client | `.client.ts` | `modules/<feature>/<capability>/clients/` | `core/<name>/` only if app-wide |
-| Builder/factory | `.builder.ts` / `.factory.ts` | `modules/<feature>/<capability>/builders/` or the capability root | `common/utilities/` only when framework-agnostic |
-| State store | `.store.ts` | `modules/<feature>/<capability>/state/` | `core/<name>/` only if app-wide |
+| Adapter | `.adapter.ts` | `modules/<feature>/<capability>/` or `.../adapters/` when multiple | `core/<name>/` if app-wide; `core/storage/` for the storage feature |
+| External client | `.client.ts` | `modules/<feature>/<capability>/` or `.../clients/` when multiple | `core/<name>/` only if app-wide |
+| Builder/factory | `.builder.ts` / `.factory.ts` | `modules/<feature>/<capability>/` or `.../builders/` when multiple | `common/utilities/` only when framework-agnostic |
+| State store | `.store.ts` | `modules/<feature>/<capability>/` or `.../state/` when multiple | `core/<name>/` only if app-wide |
 | Registry | `.registry.ts` | `modules/<feature>/<capability>/` | `core/<name>/` only if app-wide |
 | Health indicator | `.health-indicator.ts` | — | `core/health/indicators/` |
 
@@ -191,21 +248,37 @@ promoting it to `common/`.
 
 An `interface`/`type`/`enum`/exported `const` meant to be reused across more than the one file
 that declares it never stays inline in a `.controller.ts`/`.service.ts`/`.dto.ts` — it goes in
-the matching `interfaces/`/`enums`/`constants/` subfolder from the table above, even if that
+the matching `interfaces/`/`enums/`/`constants/` subfolder from the table above, even if that
 means creating the subfolder for the first time in that feature. A one-off type used by exactly
-one function in exactly one file is the only case allowed to stay inline.
+one function in exactly one file is the only case allowed to stay inline. A private map or helper
+type used only by one utility file may also stay there; do not extract implementation details just
+to populate a folder. An exported declaration is not automatically shared — check its imports.
+
+`*.util.ts` files contain pure, feature-specific helper functions and their private implementation
+details. They do not become a generic `utilities/` bucket, and they must not contain Nest
+providers, services, or unrelated feature constants. Put an error-normalization helper under the
+feature's `errors/` capability, for example, not under `legal/utilities/`; move a genuinely
+cross-feature, framework-agnostic helper to `common/utilities/`.
 
 ## `common/` vs `core/` vs `modules/`
 
 - `common/` — reusable pieces with **no app-wide state**: a validation pipe, an exception
   filter, a decorator, a plain utility function. Anything here could be copy-pasted into a
   different Nest project and still work standalone.
-- `core/` — singletons that exist **exactly once for the whole app** and usually hold or wrap
-  state/connections: the Prisma client, the auth module, the queue/cache/storage wiring, the
-  logger, health checks. Registered in `.agents/core/README.md`.
+- `core/` — technical singletons that exist **exactly once for the whole app** and usually hold
+  or wrap state/connections: the Prisma client, the auth module, the queue/cache/storage wiring,
+  the logger, health checks. Registered in `.agents/core/README.md`. Classify by ownership, not
+  by instance count: a domain module can also be a singleton and still belongs in `modules/`.
 - `modules/` — business features. Each imports from `common/` and `core/`, never the other way
   around (a `core/` provider must not depend on a `modules/*` service — that's an inverted
   dependency and a sign the logic belongs in `modules/` instead).
+
+`@Global()` changes DI visibility; it does not change ownership. Do not use `@Global()` as a
+reason to move a business feature into `core/` or to make every provider available everywhere.
+Nest's own guidance recommends using explicit `imports` for controlled module APIs and reserving
+global modules for shared infrastructure. A cross-cutting domain feature such as legal acceptance
+stays under `modules/legal/`; if it truly needs global visibility, document that exception in an
+ADR and keep its domain ownership visible.
 
 ## `bot/` vs `modules/`
 
@@ -227,6 +300,10 @@ REST and bot transports when both are chosen. See `transport-adapter.md`.
       a file type already covered by the table.
 - [ ] No reusable `interface`/`enum`/exported `const` left inline — moved to the matching
       subfolder the moment a second file needs it.
+- [ ] Paths were chosen from a responsibility/consumer inventory, not from the list of already
+      existing folders or from a filename prefix.
+- [ ] A large constants file was split by cohesive constant family; private one-file maps/types
+      were not extracted without a reuse or public-contract reason.
 - [ ] Nothing under `common/utilities/` imports `@nestjs/*`.
 - [ ] Nothing under `core/` imports from `modules/*`.
 - [ ] No empty `interfaces/`/`enums/`/`constants/`/`guards/` subfolder committed with nothing in
