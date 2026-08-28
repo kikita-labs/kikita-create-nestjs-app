@@ -15,6 +15,8 @@ changes what future generated projects look like, not this repo's own rules.
 
 ## Read when relevant
 
+- [skills/kikita-create-nestjs-app/upgrade.md](./skills/kikita-create-nestjs-app/upgrade.md) — when
+  upgrading a legacy or copied skill installation before updating a project's docs.
 - [.agents/versioning.md](./.agents/versioning.md) — when and how to bump `SKILL.md`'s
   `metadata.version` and tag a release.
 - [.agents/testing-and-quality.md](./.agents/testing-and-quality.md) — the CI checks and how

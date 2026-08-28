@@ -151,6 +151,15 @@ This works the same way whether you're driving the agent by hand or a fully agen
 ("vibecoding") workflow that never opens the project directly — it's the same slash command
 either way, no separate `-update` skill to install or remember.
 
+### Upgrade a legacy skill installation
+
+The slash command can update a project's generated documentation only after the installed skill
+itself is current. If an older project has a real `.claude/skills/kikita-create-nestjs-app/`
+directory, a root-level `SKILL.md`/`templates/`, a dirty skill clone, or a record using
+`skillCommit`, read [`upgrade.md`](./skills/kikita-create-nestjs-app/upgrade.md) first. It explains
+how to preserve the old source, install the current clone-then-junction layout, migrate the
+scaffold record, and then run update mode separately in each project directory.
+
 ## Scope
 
 Single deployable app, not a monorepo/Nx workspace and not a distributed microservices topology
