@@ -46,6 +46,15 @@ Concretely, before you consider a change done, ask: did I just —
   `.agents/architecture/` — even a small tweak? → update the matching file immediately,
   don't wait for it to come up again. The doc is what makes the correction stick for next
   time instead of getting re-litigated.
+- Change feature placement or decomposition — for example, move a domain feature out of
+  `core/`, split an over-flat feature into named capabilities, or add a recognized file suffix —
+  → update `architecture/folder-structure.md` and `code-style/module-structure.md` together.
+- Add a new role (client, builder, state store, registry) or split a grab-bag constants/utility
+  file? → document the responsibility-first classification rule and its allowed scope before
+  adding another role folder.
+- Create, change, move, or delete a source file? → run `.agents/file-change-review.md` for that
+  file. Update this documentation set too if the change introduces a new placement, decomposition,
+  testing, or comment convention.
 - Still unsure whether a change needs a doc update? It probably does — check the relevant
   README before skipping it.
 

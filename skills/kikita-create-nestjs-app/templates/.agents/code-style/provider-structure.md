@@ -83,6 +83,12 @@ right HTTP status regardless of which transport calls the service, and a bot upd
 catches the same exception type to format a platform-appropriate error message instead of
 leaking an HTTP-shaped error object into a chat reply.
 
+Do not add a `try/catch` only to log and rethrow. Catch only to recover, translate a known error,
+add safe context, or render the final transport outcome. Unexpected failures are logged once by
+the final boundary with bounded fields; expected 4xx/domain rejections are not error-stack events.
+Use the configured structured logger for fields and never attach a whole exception, raw payload, or
+secret. See `../core/logging.md`.
+
 ## Review Checklist
 
 - [ ] Constructor injection only, params `private readonly`, typed explicitly.
@@ -90,3 +96,5 @@ leaking an HTTP-shaped error object into a chat reply.
 - [ ] Blank line before/after `if` blocks (except tight guard-clause runs) and before `return`.
 - [ ] Controller/update-handler methods contain no business logic — one service call.
 - [ ] Exceptions thrown from the service layer using Nest's built-in HTTP exception classes.
+- [ ] Catches have a recovery/translation/boundary purpose; no duplicate log-and-rethrow or raw
+      exception logging was introduced. See `../core/logging.md`.

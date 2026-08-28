@@ -14,6 +14,7 @@ Always read:
 - `.agents/git-policy.md`
 - `.agents/documentation.md`
 - `.agents/testing-and-quality.md`
+- `.agents/file-change-review.md`
 - `.agents/code-style/README.md`
 - `.agents/architecture/README.md`
 
@@ -35,9 +36,18 @@ strategy), also read:
 
 - Latest stable NestJS only. Modules by feature (`src/modules/<feature>/`), not by technical
   layer — see `.agents/architecture/folder-structure.md`. Every file type (guard, interceptor,
-  filter, decorator, middleware, exception, interface, enum, constant, utility) has exactly one
+  filter, decorator, middleware, exception, interface, entity, enum, constant, utility) has exactly one
   correct folder per that file's table — never invent an ad hoc top-level folder for something
   it already covers.
+- A feature root is not an unlimited flat bucket: keep it to the module, primary transport/
+  service, and feature-wide declarations; split a large feature into named capability folders at
+  the six-production-file threshold. `src/core/` is only for app-wide singletons and
+  infrastructure wrappers — a domain such as `legal` belongs under `src/modules/legal/`. Choose
+  paths from responsibility and consumers, not from whichever role folders already exist or from
+  a filename prefix; `@Global()` changes DI visibility, not domain ownership.
+- After every source-file create/change/move, run `.agents/file-change-review.md` before reporting
+  the task complete. A hand-written file over 400 non-blank, non-comment lines or a function over
+  120 such lines is a blocking decomposition failure, not a style suggestion.
 - Every dependency this project installs — Prisma, `nestjs-pino`, `nestjs-i18n`, the bot
   platform library, everything — is latest stable at install time, same rule as NestJS itself.
   A library's major-version API can change shape between scaffolds of this skill (Prisma has,
@@ -96,6 +106,10 @@ strategy), also read:
   `PrismaExceptionFilter` maps Prisma constraint/not-found errors to the matching HTTP
   exception — a Prisma error must never surface as an unhandled 500. See
   `.agents/architecture/transport-adapter.md`'s Bootstrap wiring section.
+- All application and bootstrap logs use `nestjs-pino`; production output is structured JSON,
+  application code has no `console.*`, and secrets/raw exception objects are never logged.
+  Classify expected versus unexpected failures, log unexpected failures once at their final
+  boundary, and include only bounded error fields. See `.agents/core/logging.md`.
 <!-- SCAFFOLD: keep the next two lines only if auth was chosen -->
 - Auth follows the one fixed pattern in `.agents/core/auth.md` — short-lived access token,
   rotated refresh token in an httpOnly cookie, CSRF protection on the refresh route. Do not

@@ -8,7 +8,7 @@ Follow this sequence for any change to this repo.
 3. Make the change in the right place:
    - Skill behavior/instructions (questionnaire, mode detection, generation rules) →
      `skills/kikita-create-nestjs-app/SKILL.md`, `plan.md`, `adopt.md`, `update.md`,
-     `checklist.md`.
+     `upgrade.md`, `checklist.md`.
    - What gets generated into a user's project → `skills/kikita-create-nestjs-app/templates/`.
      See `documentation.md` for placeholder/gate rules before editing here.
    - Install instructions, repo structure, or what the skill does at a glance → root

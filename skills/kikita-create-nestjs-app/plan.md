@@ -14,7 +14,27 @@ file suffix that isn't in `folder-structure.md`'s file-type table (no `*.types.t
 `*.constant.ts`/`*.interface.ts` per that table), and never place a `core/*.md`-documented
 singleton (auth, queue, cache, storage, i18n) under `src/modules/` — every one of those belongs
 under `src/core/<name>/`, listed in `core/README.md`'s registry, even when the step text below
-doesn't repeat the full path.
+doesn't repeat the full path. Conversely, never put a business/domain feature under `src/core/`
+just because it has many providers; use `src/modules/<feature>/` and split large features into
+named capability folders per `folder-structure.md`.
+
+"Feature-based" does not mean "one flat folder per feature." Keep a feature root for its module,
+primary transport/service, and feature-wide declarations. Once it would exceed six production
+`.ts` files, or once it contains two distinct capabilities, create named child folders and keep
+their providers, clients, builders, state, DTOs, and tests together. Register them in the owning
+feature module; do not create generic `services/`, `controllers/`, `utils/`, or `misc/` buckets.
+Before writing a feature, make a short responsibility inventory: capability, role, consumers,
+visibility, and target path for each file. Do not treat the existing folder list as an architecture
+or use `@Global()` as a reason to place domain code under `src/core/`.
+
+Before every source-file create/change/move in these steps, also re-read
+`templates/.agents/file-change-review.md`, write its ownership/consumer/path inventory, and run
+its gate immediately after that file is written. A file over 400 non-blank, non-comment lines or a
+function over 120 such lines must be split before the scaffold is reported complete.
+
+When a step creates or changes logging, exception, filter, middleware, bot/event, or job-boundary
+code, also read `templates/.agents/core/logging.md` before writing it. Its error taxonomy and
+redaction rules apply to every transport, not only to `src/core/logger/`.
 
 1. **Ask the questionnaire** (`SKILL.md` section 1). Do not proceed until every answer is
    recorded.
@@ -97,9 +117,14 @@ doesn't repeat the full path.
 6. **Wire logging**: `{{PACKAGE_MANAGER}} add nestjs-pino pino-http`. Same as every other core
    singleton (Prisma, Health, Auth, Queue/Cache/Storage, i18n) — the `forRootAsync()` config
    lives in its own `src/core/logger/logger.module.ts` wrapper, not inlined directly in
-   `AppModule`'s `imports` array. Replace Nest's bootstrap logger with the Pino one in `main.ts`
-   (`bufferLogs: true` + `app.useLogger(app.get(Logger))`, imported straight from `nestjs-pino`
-   — that import is unaffected by the wrapper).
+   `AppModule`'s `imports` array. Configure production JSON/stdout and development pretty output,
+   redact authorization/cookie/set-cookie paths and project-specific secrets, and keep request
+   bodies disabled by default. For HTTP, generate or validate one request ID at the boundary and
+   pass that same value to `pino-http`; do not duplicate request-ID algorithms in separate
+   middleware and logger configuration. Replace Nest's bootstrap logger with the Pino one in
+   `main.ts` (`bufferLogs: true` + `app.useLogger(app.get(Logger))`, imported straight from
+   `nestjs-pino` — that import is unaffected by the wrapper). The mandatory error classification,
+   catch ownership, redaction, and correlation policy lives in `templates/.agents/core/logging.md`.
 
 7. **Wire the app-wide bootstrap concerns** (fixed defaults, always on, regardless of app
    type) — see `templates/.agents/architecture/transport-adapter.md`'s "Bootstrap wiring"
@@ -132,9 +157,13 @@ doesn't repeat the full path.
      filter doesn't apply — its own upstream-API error mapping (if any) is a project-specific
      concern, not this fixed default.
    - Error responses use Nest's default `HttpException` JSON shape (`statusCode`, `message`,
-     `error`) — no custom envelope wrapper. The Prisma exception filter's whole job is making
-     sure Prisma errors end up going through that same shape via a real `HttpException`
-     subclass, not inventing a second response format.
+     `error`) for the simple REST baseline — no accidental custom envelope wrapper. If a separate
+     web client, bot, worker, or service consumes the response, define a documented stable error
+     contract with `errorCode`, a safe message, allowlisted details, and a correlation ID as
+     described in `templates/.agents/core/logging.md`; do not expose raw Prisma/provider/error
+     metadata merely to make transports look alike. The Prisma exception filter's whole job is
+     making known Prisma errors end up as safe `HttpException` subclasses, not inventing a second
+     format or a generic unclassified 500.
 
 8. **Wire the transport layer(s)** per the application-type answer — see
    `templates/.agents/architecture/transport-adapter.md` for the full pattern:
@@ -173,10 +202,10 @@ doesn't repeat the full path.
    **under `src/core/auth/`** — auth is an app-wide singleton like Prisma/Health, never a
    `src/modules/*` feature, even though it has a controller and DTOs the way a feature does; see
    `folder-structure.md`'s scaffold tree and `core/README.md`'s registry for the exact layout
-   (`auth.controller.ts`, `auth.service.ts`, `auth.module.ts` flat, plus `guards/`, `strategies/`,
-   `decorators/`, `dto/` subfolders — any extra auth-only service, e.g. an OAuth-provider
-   exchange service, sits flat alongside `auth.service.ts` in that same folder, not in
-   `src/modules/`). Install `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `argon2`,
+   (`auth.controller.ts`, `auth.service.ts`, `auth.module.ts` at the root, plus `guards/`,
+   `strategies/`, `decorators/`, and `dto/` subfolders). Keep additional auth capabilities in
+   named child folders once the feature-layout threshold is reached; do not let auth become a
+   flat pile of unrelated providers. Install `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `argon2`,
    `cookie-parser`, `csrf-csrf`. Access token short-lived, returned in the response body. Refresh
    token httpOnly cookie scoped to `/auth/refresh`, rotated on every use (hash stored in
    `RefreshToken` Prisma model, previous hash invalidated). `RolesGuard` + a `@Roles()` decorator.
@@ -197,8 +226,8 @@ doesn't repeat the full path.
     build the storage adapter under `src/core/storage/` exactly as `core/storage.md` names it —
     `storage.interface.ts` (`StorageAdapter` interface), `local-storage.adapter.ts`
     (`LocalStorageAdapter`), `s3-storage.adapter.ts` (`S3StorageAdapter`), `storage.module.ts`.
-    The `.adapter.ts` suffix is deliberate (matches `folder-structure.md`'s file-type table row
-    for "Storage adapter") — don't rename to `.service.ts`/`*Service`, even though it's a
+    The `.adapter.ts` suffix is deliberate (matches `folder-structure.md`'s `Adapter` row) —
+    don't rename to `.service.ts`/`*Service`, even though it's a
     `@Injectable()` like every other provider. Multer configured with `memoryStorage()` and
     `limits` (`fileSize`, `files`), MIME-type whitelist in a custom pipe.
 
@@ -292,7 +321,8 @@ doesn't repeat the full path.
     - `.agents/README.md` — flat index, kept in sync with whichever conditional files actually
       got generated.
     - `.agents/*.md` flat topic docs (workflow, git-policy, documentation, testing-and-quality,
-      refactoring, progress — always include all of these) plus `agent-surface.md` only if
+      file-change-review, refactoring, progress — always include all of these) plus
+      `agent-surface.md` only if
       mandatory TSDoc was chosen.
     - `.agents/code-style/` with its `README.md` hub + `imports.md`, `provider-structure.md`,
       `dto-and-validation.md`, `module-structure.md`.
@@ -301,7 +331,8 @@ doesn't repeat the full path.
       `messaging.md` only if messaging was chosen.
     - `.agents/shared/README.md` and `.agents/core/README.md` — both start with a registry
       table pre-populated with the always-on entries (Prisma, Logger, Health, the global
-      Prisma exception filter), plus `core/health.md` (always, not gated) and `core/auth.md` /
+      Prisma exception filter), plus `core/health.md` and `core/logging.md` (always, not gated) and
+      `core/auth.md` /
       `core/queue.md` / `core/cache.md` / `core/storage.md` / `core/i18n.md` only for the
       features actually chosen.
     - `.agents/decisions/README.md` — always generated, starts with no ADR files.

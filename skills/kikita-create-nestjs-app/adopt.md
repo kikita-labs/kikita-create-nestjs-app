@@ -54,6 +54,17 @@ first and only ask about what genuinely can't be determined by inspection:
 - **Package manager**: whichever lockfile is present (`pnpm-lock.yaml` / `package-lock.json`
   / `yarn.lock`) — exactly one should exist; flag it if more than one does instead of
   picking.
+- **Folder layout**: inventory `src/` by ownership, not only by filename suffix. Treat a
+  business/domain feature under `src/core/` as a structural finding, not as a core singleton.
+  Treat `@Global()` on a domain module as a visibility choice, not proof that the module belongs
+  in `core/`.
+  Treat a feature root with more than six production `.ts` files, or with several unrelated
+  capability groups, as an over-flat feature. Adoption is documentation-only: describe the
+  current layout accurately, call out the deviation and recommended target in the architecture
+  docs (including a deviation row in `core/README.md` if a domain module is still under `core/`),
+  and do not move existing source files unless the user separately asks for a refactor. Do not
+  use an existing over-flat feature as the template for new files; use the preferred
+  responsibility-first layout for new work and record the legacy deviation.
 - **Git policy**: ask — this isn't inferrable from the repo.
 
 For the fixed defaults this skill normally never asks about (ORM/DB, validation shape,
@@ -82,6 +93,9 @@ answers from step 2 instead of a fresh questionnaire. Differences from a fresh s
   describe the project's real folder structure and patterns as they exist today, not the
   template's example layout — read `src/` first (`common/`, `core/`, `modules/`, `bot/`, or
   whatever's actually there) and adapt the doc content, don't paste the template verbatim.
+- `.agents/core/logging.md` is always generated during adoption. It must describe the logger,
+  exception boundaries, correlation, redaction, and known gaps that actually exist; adoption must
+  not silently upgrade the code or present optional telemetry as already configured.
 - Skip `git init` — the project already has its history; just make sure the new `.agents/`
   files get committed in a normal commit once the user reviews them.
 

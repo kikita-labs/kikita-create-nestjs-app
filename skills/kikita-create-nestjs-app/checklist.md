@@ -39,6 +39,17 @@ genuinely true — do not check a box you didn't verify.
       `@Type(() => NestedDto)` — spot-check by submitting an invalid nested value and confirming
       the request is actually rejected, not silently accepted.
 - [ ] `nestjs-pino` wired; app boot logs are structured JSON, not the default Nest logger output.
+- [ ] Logger configuration uses JSON/stdout in production and pretty output only in development;
+      authorization, cookies, `set-cookie`, and project-specific secrets are redacted, and request
+      bodies are disabled by default.
+- [ ] `console.*` is blocked for application code by ESLint; source code uses the configured
+      structured logger API for fields rather than passing whole exception objects.
+- [ ] `.agents/core/logging.md` was applied: expected 4xx/domain rejections are distinct from
+      unexpected failures, catches do not only log and rethrow, and unexpected failures are logged
+      once at the final transport/application boundary with bounded fields.
+- [ ] HTTP request correlation is generated/validated once and shared by the response header,
+      `pino-http`, and the final exception boundary. Bot/WebSocket/job boundaries have an explicit
+      short-lived correlation strategy when those transports are present.
 - [ ] `main.ts` calls `app.enableShutdownHooks()`.
 - [ ] Global `ClassSerializerInterceptor` wired in `main.ts`; every controller/update-handler
       method returning a DTO with an `@Exclude()` field actually calls `plainToInstance()` on it
@@ -96,6 +107,9 @@ genuinely true — do not check a box you didn't verify.
       `typescript-eslint` `strict-type-checked` + `simple-import-sort` +
       `consistent-type-imports` + a restricted-import boundary rule, `eslint-config-prettier`
       last), lints with zero errors on the generated skeleton.
+- [ ] ESLint enforces the decomposition caps from `.agents/testing-and-quality.md`:
+      `max-lines` 400, `max-lines-per-function` 120, `complexity` 15, and `max-depth` 4; no
+      project-wide disable hides an oversized hand-written file.
 - [ ] The `no-restricted-imports` (`@nestjs/mapped-types`, `bcrypt`, `bcryptjs`) and
       `no-restricted-syntax` (`process.env` outside the config schema file) rules from
       `.agents/testing-and-quality.md`'s "Mechanically Enforced Rules" are actually present in
@@ -107,15 +121,28 @@ genuinely true — do not check a box you didn't verify.
       seeing it actually flagged. A clean `lint` run alone does not prove this rule is configured
       correctly, since the plugin lints clean either way.
 - [ ] Every file actually generated matches `folder-structure.md`'s file-type table: no file
-      suffix invented outside that table (no `*.types.ts`, no ad hoc top-level folder); every
+      suffix invented outside that table (no `*.types.ts`, no ad hoc top-level folder); no domain
+      feature is hidden under `src/core/`; every
       `core/*.md`-documented singleton (auth, queue, cache, storage, i18n) lives under
-      `src/core/<name>/`, never under `src/modules/`; storage adapter files use the `.adapter.ts`
+      `src/core/<name>/`, never under `src/modules/`; feature roots stay within the six production
+      `.ts` file threshold or use named capability folders; storage adapter files use the `.adapter.ts`
       suffix `core/storage.md` specifies, not `.service.ts`.
 - [ ] No `interface`/`type`/`enum`/exported `const` imported by more than one file still sits
       inline in a `.controller.ts`/`.service.ts`/flat feature file — grep each generated feature
       folder for cross-file imports of a locally-declared symbol and confirm anything reused
       moved to the matching `interfaces/`/`enums/`/`constants/` subfolder per
       `folder-structure.md`'s "No inline reusable declarations".
+- [ ] Every feature-specific utility is grouped by the responsibility it serves (for example,
+      `errors/`), not placed in a generic `utilities/` bucket; a `.util.ts` contains utility
+      functions and private implementation details, not Nest providers or unrelated constants.
+- [ ] No grab-bag `<feature>.constants.ts` combines unrelated constant families; split shared
+      action, error, metric, modal, and lifecycle constants into cohesive files, while keeping
+      private one-file maps/types local.
+- [ ] Paths were chosen from a responsibility/consumer inventory; a capability was not inferred
+      solely from filename prefixes or from the role folders already present.
+- [ ] The per-file gate in `.agents/file-change-review.md` was run after every generated source
+      file; reusable declarations, domain entities, tests, comments, and decomposition decisions
+      were checked rather than inferred from file suffixes.
 - [ ] `lint`, `format`, `format:check` scripts exist and run clean.
 - [ ] `package.json` has `"prepare": "husky"`. Husky installed: `pre-commit` runs `lint-staged`
       + the non-English content check, `pre-push` runs the full lint + format + test gate.
@@ -136,6 +163,10 @@ genuinely true — do not check a box you didn't verify.
 - [ ] `.agents/agent-surface.md` present only if mandatory TSDoc was chosen.
 - [ ] `.agents/documentation.md` (the "how to write/maintain docs" master file) exists and is
       linked from `AGENTS.md`.
+- [ ] `.agents/core/logging.md` exists, is linked from `.agents/core/README.md`, and its review
+      checklist was applied to logger, filter, catch, bot, WebSocket, and job-boundary changes.
+- [ ] `.agents/file-change-review.md` exists, is linked from `.agents/README.md` and `AGENTS.md`,
+      and its gate was applied to every generated source file.
 - [ ] No Cyrillic or mojibake in any tracked file, including TSDoc.
 
 ## Git

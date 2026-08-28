@@ -4,7 +4,7 @@ This repo has two documentation layers. Keep them separate — editing the wrong
 most common mistake here.
 
 1. **This repo's own docs** — `AGENTS.md`, `.agents/`, root `README.md`. Describe how to
-   develop and maintain *this plugin*.
+   develop and maintain *this Agent Skill repository*.
 2. **The template payload** — `skills/kikita-create-nestjs-app/templates/`. Describes and
    generates docs for *the NestJS project this skill scaffolds*. Its `AGENTS.md`,
    `CLAUDE.md`, and `.agents/*.md` are template source: copied, with placeholders resolved,
@@ -20,8 +20,10 @@ All under `skills/kikita-create-nestjs-app/`:
 - `plan.md` — step-by-step fresh-init sequence.
 - `adopt.md` — retrofit sequence for an existing (non-scaffolded) NestJS project.
 - `update.md` — diff/merge sequence for an already-scaffolded project. Contains `git -C
-  <plugin-root>` commands hardcoded to the `skills/kikita-create-nestjs-app/templates/`
+  <repo-root>` commands hardcoded to the `skills/kikita-create-nestjs-app/templates/`
   path — keep those in sync if this repo's layout ever changes again.
+- `upgrade.md` — preflight and migration sequence for a legacy/copy-installed skill before
+  `update.md` can safely update a project's docs.
 - `checklist.md` — post-init verification the skill runs before reporting success.
 
 ## Template conventions (inside `templates/`)

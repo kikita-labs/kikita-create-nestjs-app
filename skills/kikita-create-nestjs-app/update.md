@@ -12,7 +12,12 @@ instead of overwriting them. The project's docs diverge after scaffolding (real 
 edits, extra ADRs, feature-specific rules) — an update must respect that, never blind-`cp` a
 template over a customized file.
 
-## 1. Locate the skill's own source
+## 1. Locate and validate the skill's own source
+
+If the user asked to update the installed skill itself, or the source is a legacy copy, stop and
+follow `upgrade.md` first. This file updates a target project's documentation after the skill
+source is current; it is not a reliable self-updater for an older skill that is currently being
+executed.
 
 The Agent Skills spec has no update mechanism of its own, so this falls back to git. The
 skill is running from wherever it was installed (`~/.claude/skills/kikita-create-nestjs-app`,
@@ -21,22 +26,32 @@ equivalent location for another Agent-Skills-compatible client — see `README.m
 section). Per that section, the installed skill folder is a symlink/junction into a full git
 clone of this repo, so its `.git` is reachable by walking up from the currently executing
 `SKILL.md`'s own (resolved) location: run `git -C <path-to-running-skill-dir> rev-parse
---show-toplevel` to get `<plugin-root>`; don't guess or re-derive it another way. This skill's
-own template tree then lives at `<plugin-root>/skills/kikita-create-nestjs-app/templates/`.
+--show-toplevel` to get `<repo-root>`; don't guess or re-derive it another way. This skill's
+own template tree then lives at `<repo-root>/skills/kikita-create-nestjs-app/templates/`.
 
 - If `git rev-parse --show-toplevel` fails (not inside a git working tree at all) — stop and
   tell the user: this install was made by copying files instead of cloning (or the link to
   the clone is broken), so there's no history to diff against; ask them to reinstall per
-  `README.md`'s Install section before retrying the update.
-- `git -C <plugin-root> status --porcelain` — if it reports local changes, stop and tell the user:
+  `README.md`'s Install section or `upgrade.md` before retrying the update.
+- Confirm `<repo-root>/skills/kikita-create-nestjs-app/SKILL.md` and its `templates/` directory
+  exist. If the running source instead has a root-level `SKILL.md` and `templates/`, it is legacy;
+  do not run this update algorithm against it.
+- `git -C <repo-root> status --porcelain` — if it reports local changes, stop and tell the user:
   this install has been hand-edited and pulling would risk losing that; ask how they want to
   proceed rather than pulling over it.
-- Otherwise `git -C <plugin-root> pull --ff-only` to bring the template source current before
+- Otherwise `git -C <repo-root> pull --ff-only` to bring the template source current before
   diffing anything.
+
+If the old project-local installation was preserved during `upgrade.md`, keep its path as the
+legacy baseline. A legacy commit hash may belong to a repository history that the current source
+clone cannot reach. In that case, compare the old `templates/.agents/` tree with the current
+`skills/kikita-create-nestjs-app/templates/.agents/` tree; do not call an unreachable hash a no-op.
 
 ## 2. Read the project's scaffold record
 
-Read `.agents/.kikita-scaffold.json` in the target project:
+Read `.agents/.kikita-scaffold.json` in the target project. Current records use
+`scaffoldedFromCommit`. For a legacy record, use `skillCommit` as an alias and preserve all other
+answers and metadata; see `upgrade.md` for the migration rules.
 
 ```json
 {
@@ -63,10 +78,16 @@ Read `.agents/.kikita-scaffold.json` in the target project:
 user already answered, unless a diff specifically depends on an answer this record doesn't have
 (e.g. the skill grew a new question after this project was scaffolded) — then ask only that one.
 
+If both `scaffoldedFromCommit` and legacy `skillCommit` exist, they must match. If neither exists,
+or the baseline is not a commit object reachable from the current source, use the preserved legacy
+template-tree fallback from `upgrade.md`; never turn an unresolved baseline into a false "no
+changes" result. Preserve extra fields such as `scaffoldedAt`, `monorepo`, and any project-specific
+metadata while normalizing the record.
+
 ## 3. Diff since last sync
 
 ```
-git -C <plugin-root> log --oneline <scaffoldedFromCommit>..HEAD -- skills/kikita-create-nestjs-app/templates/.agents
+git -C <repo-root> log --oneline <scaffoldedFromCommit>..HEAD -- skills/kikita-create-nestjs-app/templates/.agents
 ```
 
 Empty output → docs are already current. Report that and stop; don't rewrite the scaffold
@@ -76,11 +97,17 @@ Otherwise, for every file under `skills/kikita-create-nestjs-app/templates/.agen
 in that range:
 
 ```
-git -C <plugin-root> diff <scaffoldedFromCommit>..HEAD -- skills/kikita-create-nestjs-app/templates/.agents/<relpath>
+git -C <repo-root> diff <scaffoldedFromCommit>..HEAD -- skills/kikita-create-nestjs-app/templates/.agents/<relpath>
 ```
 
 Map `skills/kikita-create-nestjs-app/templates/.agents/<relpath>` to the project path
 `.agents/<relpath>`.
+
+When the baseline commit is not reachable but a preserved legacy source tree is available, use a
+tree comparison between the old and current `templates/.agents/` directories and review the full
+intent. Do not use `git log` failure as proof that the project is current. If no baseline tree was
+preserved, stop and report that a safe intent-preserving update cannot be reconstructed; do not
+blindly replace the project's documentation with the current templates.
 
 ## 4. Apply per file
 
@@ -96,6 +123,10 @@ Map `skills/kikita-create-nestjs-app/templates/.agents/<relpath>` to the project
   `core/messaging.md`, `core/i18n.md`, `agent-surface.md`, bot-specific transport docs): only
   add it if the stored `answers` say the gate is open for this project. Resolve any
   `{{PLACEHOLDER}}` in it from `answers`.
+- `core/health.md` and `core/logging.md` are always-generated docs, not questionnaire-gated. Add
+  them to an older project when they are new upstream, then update the relevant README/AGENTS
+  links. For an adopted project, describe the implementation that actually exists and record gaps;
+  do not claim that a missing logger feature is already wired.
 - **File was deleted upstream**: don't delete the project's copy automatically — flag it and
   ask, since a project may still depend on content that got removed from the template for
   reasons specific to newer scaffolds.
@@ -107,11 +138,12 @@ restructure should be previewed first.
 
 ## 5. Record the new sync point
 
-After applying (or explicitly skipping) every changed file, update
-`.agents/.kikita-scaffold.json`'s `scaffoldedFromCommit` to the plugin repo's current `HEAD`
-(`git -C <plugin-root> rev-parse HEAD`). Do this even if some files were skipped on conflict —
-those are called out in the report, not silently dropped, but re-running the update shouldn't
-re-show already-reviewed changes for files that *were* applied.
+After every applicable file is applied, and no unresolved conflict remains, update
+`.agents/.kikita-scaffold.json`'s `scaffoldedFromCommit` to the source repo's current `HEAD`
+(`git -C <repo-root> rev-parse HEAD`). Preserve unknown legacy metadata while writing the
+canonical key. If any file is skipped because of a conflict, leave the old sync point in place so
+the unresolved diff remains visible on the next run; report the conflict explicitly. A gated file
+that is intentionally closed by the stored answers may be recorded as handled.
 
 ## 6. Report
 

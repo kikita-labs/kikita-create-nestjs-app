@@ -3,7 +3,9 @@
 A `modules/<feature>/*.module.ts` file declares its public surface through `exports` — anything
 not exported is that feature's private implementation detail, even though TypeScript's module
 system would technically let another file import it directly via a relative path (blocked by the
-ESLint restricted-import rule in `README.md`, not by the language itself).
+ESLint restricted-import rule in `README.md`, not by the language itself). Capability folders
+inside a feature are organizational by default; they become an additional Nest boundary only
+when they contain their own `*.module.ts` and are imported by the parent feature module.
 
 ```ts
 @Module({
@@ -22,6 +24,13 @@ export class UsersModule {}
   injecting `UsersService` from `UsersModule`).
 - A feature module must never import another feature's controller, DTO meant to stay internal,
   or Prisma-adjacent repository helper directly — only what's in `exports`.
+- Code in one top-level feature must not reach into another feature's capability folders or
+  private files. Expose a narrow provider from the owning feature module, or move genuinely
+  cross-feature logic to `common/` or a true app-wide `core/` singleton.
+- `@Global()` controls provider visibility, not ownership. A business feature remains under
+  `modules/<feature>/` even if several transports use one singleton instance; do not move it to
+  `core/` merely to avoid explicit imports. Use `@Global()` sparingly and prefer an explicit
+  module import when it keeps the dependency graph clear.
 - `core/` providers (Prisma, auth, logger, queue, cache, storage) are typically global
   (`@Global()` module or re-exported from `AppModule`) — every feature module can inject them
   without explicitly importing the core module, since they're true app-wide singletons. Don't
@@ -35,5 +44,8 @@ export class UsersModule {}
 
 - [ ] Every module's `exports` array only lists what other modules genuinely need.
 - [ ] No feature module reaches into another feature's DTO/controller/repository directly.
+- [ ] No cross-feature import reaches into a capability folder or other private implementation
+      path.
 - [ ] No new `forwardRef()` without a comment explaining why the cycle exists.
-- [ ] Nothing under `modules/*` is marked `@Global()`.
+- [ ] Nothing under `modules/*` is marked `@Global()` unless an ADR explicitly justifies a
+      temporary or exceptional domain-wide visibility requirement.

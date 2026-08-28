@@ -22,6 +22,14 @@ the post-init verification it runs before handing the project back to you.
   (`class-validator`/`class-transformer`), Zod-validated env config, `nestjs-pino` structured
   logging, ESLint (`@darraghor/eslint-plugin-nestjs-typed`) + Prettier + Husky pre-wired, a local
   `docker-compose.yml` (Postgres always, Redis/RabbitMQ if the matching feature was chosen).
+- A feature-based `src/` layout: small features stay together, large features split into named
+  capability folders, and `src/core/` remains reserved for app-wide singleton infrastructure.
+- A mandatory per-file review gate after every source change: it checks ownership and placement,
+  reusable declarations/entities/constants, decomposition thresholds, test coverage, comments, and
+  module wiring. ESLint also blocks hand-written files over 400 lines and functions over 120 lines.
+- A mandatory logging/error policy: structured Pino events, redaction, request/event correlation,
+  one final error boundary, safe cross-process error contracts, and no `console.*` in application
+  code.
 - REST branch: Swagger at `/docs`, URI versioning (`/v1/...`), env-driven CORS allowlist.
 - Bot branch: generic Update-handler transport pattern, with concrete adapters for
   `nestjs-telegraf` (Telegram) and `necord` (Discord) — see
@@ -142,6 +150,15 @@ update mode can't run.
 This works the same way whether you're driving the agent by hand or a fully agent-driven
 ("vibecoding") workflow that never opens the project directly — it's the same slash command
 either way, no separate `-update` skill to install or remember.
+
+### Upgrade a legacy skill installation
+
+The slash command can update a project's generated documentation only after the installed skill
+itself is current. If an older project has a real `.claude/skills/kikita-create-nestjs-app/`
+directory, a root-level `SKILL.md`/`templates/`, a dirty skill clone, or a record using
+`skillCommit`, read [`upgrade.md`](./skills/kikita-create-nestjs-app/upgrade.md) first. It explains
+how to preserve the old source, install the current clone-then-junction layout, migrate the
+scaffold record, and then run update mode separately in each project directory.
 
 ## Scope
 

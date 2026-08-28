@@ -3,7 +3,7 @@ name: kikita-create-nestjs-app
 description: Scaffold a new NestJS project (latest stable) — REST API and/or bot (any platform) — with a full .agents/ documentation tree, code style, and git policy pre-wired — retrofit that same .agents/ tree onto an existing NestJS project this skill didn't create — or, in a project this skill already scaffolded/adopted, pull and merge upstream .agents/ doc updates. Use when the user asks to init/bootstrap/create a new NestJS app/API/bot, invokes /kikita-create-nestjs-app in an empty or near-empty directory, asks to add/generate/retrofit AGENTS.md or .agents/ docs onto an existing NestJS project, or asks to update/sync/refresh the project's agent docs / .agents/ conventions in a project this skill previously touched.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "2.3.0"
   homepage: "https://github.com/kikita-labs/kikita-create-nestjs-app"
 ---
 
@@ -12,6 +12,10 @@ metadata:
 Bootstraps a new NestJS project and generates its `AGENTS.md` / `.agents/` documentation tree so
 any AI agent (Claude Code, Codex, etc.) working in the project afterwards has a complete,
 self-maintaining source of truth.
+
+When the user asks to update the skill installation itself, or the installed copy is legacy,
+read `upgrade.md` before `update.md`. Updating the installed skill source and updating a project's
+generated documentation are separate operations.
 
 ## 0. Mode detection (always do this first)
 
@@ -141,6 +145,10 @@ Fixed defaults — **never** ask about these, they're locked by design:
 - **Rate limiting**: `@nestjs/throttler` always installed for REST and/or bot, IP-keyed for REST
   routes, user/chat-id-keyed for bot handlers — never skipped as "not needed yet".
 - **Logging**: `nestjs-pino`, always — structured JSON logs, no plain `Logger` option offered.
+  Generate `.agents/core/logging.md` and follow it for expected-versus-unexpected error
+  classification, one-boundary logging, request/event correlation, redaction, safe cross-process
+  error contracts, and the `console.*` prohibition. `nestjs-pino` provides the mechanism; it does
+  not classify application failures for the agent.
 - **Health checks**: `@nestjs/terminus`, always wired, not questionnaire-gated — two separate
   routes, `GET /health/live` (process-only, no external checks) and `GET /health/ready`
   (Prisma + any chosen Redis/RabbitMQ dependency), never merged into one. See
@@ -186,15 +194,28 @@ Run `checklist.md` in full before reporting success.
   conditional file (auth, queue, cache, storage, messaging, i18n, agent-surface) is added or
   skipped.
 - Topics that are genuinely one short doc stay flat in `.agents/*.md` (workflow, git-policy,
-  documentation, testing-and-quality, agent-surface, refactoring, progress).
+  documentation, testing-and-quality, file-change-review, agent-surface, refactoring, progress).
 - Topics that fan out into several docs, or per-feature registries, get a subfolder with its own
   `README.md` hub: `.agents/code-style/`, `.agents/architecture/`, `.agents/shared/`,
   `.agents/core/`, `.agents/decisions/`.
 - `.agents/shared/README.md` registers `src/common/` (framework-agnostic utilities — zero
   `@nestjs/*` imports — plus generic pipes/filters/interceptors/decorators).
   `.agents/core/README.md` registers `src/core/` app-wide singletons (auth, Prisma client
-  provider, logger, queue, cache, storage, i18n — each with its own conditional doc file when
-  that feature was chosen).
+  provider, logger, queue, cache, storage, i18n). `core/logging.md` is always generated because
+  every project needs the cross-cutting logging, error, redaction, and correlation policy; the
+  other feature docs are conditional on the selected features.
+- The generated `src/` tree is feature-based but not indiscriminately flat: a small feature can
+  keep its module/controller/service together, while a large feature splits named capabilities
+  into child folders. `src/core/` is never a catch-all for domain features; `legal` business logic
+  belongs in `src/modules/legal/` even when its providers are singleton-scoped or used by every
+  transport. Follow
+  `architecture/folder-structure.md` and `code-style/module-structure.md` for the six-file
+  threshold and recognized capability layout. Classify ownership and consumers before choosing a
+  path; do not derive architecture from the list of existing role folders or filename suffixes.
+- Every generated project's source-file create/change/move runs the per-file gate in
+  `.agents/file-change-review.md`, including the ownership/path inventory, declaration extraction,
+  decomposition thresholds, test decision, and comment review. The gate is mandatory after each
+  file, not a single final glance over the feature.
 - `.agents/decisions/README.md` explains when a short ADR is required (layer direction, message
   broker migration, versioning strategy change) — always generated, starts with no ADR files.
 - All tracked file content — including TSDoc — is English only. No Cyrillic, no mojibake.

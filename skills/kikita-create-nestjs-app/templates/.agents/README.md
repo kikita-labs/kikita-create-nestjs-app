@@ -9,6 +9,8 @@ given task; this file is the flat map of everything that exists under `.agents/`
 - [git-policy.md](./git-policy.md) — commit/push rules and authority.
 - [documentation.md](./documentation.md) — how to write and maintain these docs.
 - [testing-and-quality.md](./testing-and-quality.md) — lint/format/test gate.
+- [file-change-review.md](./file-change-review.md) — per-file ownership, decomposition, test, and
+  comment gate to run after every source-file change.
 - [refactoring.md](./refactoring.md) — refactor policy.
 - [progress.md](./progress.md) — dated status log.
 <!-- SCAFFOLD: keep only if mandatory TSDoc was chosen -->
@@ -24,7 +26,8 @@ given task; this file is the flat map of everything that exists under `.agents/`
   generic pipes/filters/interceptors/guards/middleware/decorators/exceptions/interfaces/enums/
   constants).
 - [core/](./core/README.md) — registry of `src/core/` app-wide singletons (Prisma client, config
-  schema, logger, health checks, auth, queue, cache, storage, i18n).
+  schema, logger, health checks, auth, queue, cache, storage, i18n), plus the always-on logging,
+  error, redaction, and correlation policy in `core/logging.md`.
 - [decisions/](./decisions/README.md) — ADRs for hard-to-reverse architectural changes.
 
 Read `documentation.md` before adding, moving, or restructuring anything here. It's the master

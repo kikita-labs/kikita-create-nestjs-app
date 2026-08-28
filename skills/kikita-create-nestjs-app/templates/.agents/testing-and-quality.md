@@ -97,9 +97,25 @@ easy to skip because the plugin still "works" (lints clean) with its own default
         'Read env vars through the Zod-validated ConfigService, not process.env directly. ' +
         'See code-style/dto-and-validation.md.',
     }],
+    'no-console': 'error',
+    // These caps make the file-change review gate executable. They ignore blank/comment-only lines,
+    // but comments are not a way to make an oversized implementation acceptable.
+    'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
+    'max-lines-per-function': ['error', {
+      max: 120,
+      skipBlankLines: true,
+      skipComments: true,
+    }],
+    'complexity': ['error', 15],
+    'max-depth': ['error', 4],
   },
 }
 ```
+
+`max-lines` and `max-lines-per-function` are hard caps for hand-written application code. A
+generated/vendor/data-only file may use a narrow path-specific override only when the reason is
+recorded; never add a project-wide disable. A lint pass does not replace the responsibility and
+consumer review in `file-change-review.md`.
 
 The `process.env` rule needs per-file overrides disabling it everywhere reading the raw
 environment is legitimately unavoidable — **more than just the Zod schema file**:
@@ -213,3 +229,12 @@ Wire it into the `pre-commit` Husky hook alongside `lint-staged` so it's non-opt
 - [ ] Generated Prisma client (`generated/`) and migration SQL never hand-edited.
 - [ ] `eslint.config.js` actually has the `no-restricted-imports`/`no-restricted-syntax` block
       from "Mechanically Enforced Rules" above — not just documented, wired.
+- [ ] `eslint.config.js` actually enforces `max-lines` (400), `max-lines-per-function` (120),
+      `complexity` (15), and `max-depth` (4), with only narrow documented exceptions.
+- [ ] `eslint.config.js` blocks `console.*` in application code; logs use `nestjs-pino` and its
+      structured API. Any unavoidable tooling exception is path-specific and documented.
+- [ ] Logging/error changes were reviewed against `.agents/core/logging.md`: expected and
+      unexpected failures are distinguished, redaction and correlation are tested, and an
+      unexpected failure is logged once at its final boundary.
+- [ ] `file-change-review.md` was run for every changed source file, not only once after the whole
+      feature was written.
