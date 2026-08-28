@@ -39,6 +39,17 @@ genuinely true — do not check a box you didn't verify.
       `@Type(() => NestedDto)` — spot-check by submitting an invalid nested value and confirming
       the request is actually rejected, not silently accepted.
 - [ ] `nestjs-pino` wired; app boot logs are structured JSON, not the default Nest logger output.
+- [ ] Logger configuration uses JSON/stdout in production and pretty output only in development;
+      authorization, cookies, `set-cookie`, and project-specific secrets are redacted, and request
+      bodies are disabled by default.
+- [ ] `console.*` is blocked for application code by ESLint; source code uses the configured
+      structured logger API for fields rather than passing whole exception objects.
+- [ ] `.agents/core/logging.md` was applied: expected 4xx/domain rejections are distinct from
+      unexpected failures, catches do not only log and rethrow, and unexpected failures are logged
+      once at the final transport/application boundary with bounded fields.
+- [ ] HTTP request correlation is generated/validated once and shared by the response header,
+      `pino-http`, and the final exception boundary. Bot/WebSocket/job boundaries have an explicit
+      short-lived correlation strategy when those transports are present.
 - [ ] `main.ts` calls `app.enableShutdownHooks()`.
 - [ ] Global `ClassSerializerInterceptor` wired in `main.ts`; every controller/update-handler
       method returning a DTO with an `@Exclude()` field actually calls `plainToInstance()` on it
@@ -152,6 +163,8 @@ genuinely true — do not check a box you didn't verify.
 - [ ] `.agents/agent-surface.md` present only if mandatory TSDoc was chosen.
 - [ ] `.agents/documentation.md` (the "how to write/maintain docs" master file) exists and is
       linked from `AGENTS.md`.
+- [ ] `.agents/core/logging.md` exists, is linked from `.agents/core/README.md`, and its review
+      checklist was applied to logger, filter, catch, bot, WebSocket, and job-boundary changes.
 - [ ] `.agents/file-change-review.md` exists, is linked from `.agents/README.md` and `AGENTS.md`,
       and its gate was applied to every generated source file.
 - [ ] No Cyrillic or mojibake in any tracked file, including TSDoc.

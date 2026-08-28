@@ -54,11 +54,17 @@ async function bootstrap() {
   `PrismaClientKnownRequestError` codes to the matching Nest HTTP exception (`P2002` →
   `ConflictException`, `P2025` → `NotFoundException`, and so on for the codes the project
   actually hits). Without it a constraint violation surfaces as an unhandled 500. Error
-  responses use Nest's default `HttpException` JSON shape — no custom envelope; the filter's
-  job is making Prisma errors go through a real `HttpException` subclass so they follow that
-  same shape instead of a generic 500. Registered as an `APP_FILTER` provider in `AppModule`
-  (not `app.useGlobalFilters()` in `main.ts`) — see `code-style/module-structure.md`'s
-  `AppModule` section for why global filters/guards go through DI instead.
+  responses use Nest's default `HttpException` JSON shape for the simple REST baseline — no
+  accidental custom envelope. If another process consumes this API, define the stable error
+  contract described in `../core/logging.md` instead of exposing Prisma metadata or raw exception
+  messages. Registered as an `APP_FILTER` provider in `AppModule` (not `app.useGlobalFilters()` in
+  `main.ts`) — see `code-style/module-structure.md`'s `AppModule` section for why global
+  filters/guards go through DI instead. The filter must translate and sanitize known errors; it
+  must not log the same unexpected exception again if the final boundary already owns that log.
+- **Error/logging boundary** — each transport owns its final safe renderer and one unexpected-error
+  log. HTTP uses the global exception filter and request correlation; bot/WebSocket/event handlers
+  use their framework-specific boundary and a short-lived correlation ID. See
+  `../core/logging.md` for classification, redaction, and catch ownership.
 - **`GET /health/live` + `GET /health/ready`** (`@nestjs/terminus`) — always wired, not gated by
   the questionnaire, always two separate routes, never merged. Liveness checks nothing external;
   readiness checks Prisma plus every external dependency actually chosen (Redis if
@@ -242,3 +248,6 @@ so the pattern is discoverable for the next feature instead of re-derived from s
       cancel/timeout path.
 - [ ] "Both" chosen: REST and bot handlers for the same feature call the identical service
       method, no duplicated logic.
+- [ ] Each transport has a final safe error renderer and one unexpected-error log boundary;
+      correlation IDs, redaction, expected-error levels, and cross-process error contracts follow
+      `../core/logging.md`.

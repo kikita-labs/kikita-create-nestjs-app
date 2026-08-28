@@ -93,6 +93,9 @@ answers from step 2 instead of a fresh questionnaire. Differences from a fresh s
   describe the project's real folder structure and patterns as they exist today, not the
   template's example layout — read `src/` first (`common/`, `core/`, `modules/`, `bot/`, or
   whatever's actually there) and adapt the doc content, don't paste the template verbatim.
+- `.agents/core/logging.md` is always generated during adoption. It must describe the logger,
+  exception boundaries, correlation, redaction, and known gaps that actually exist; adoption must
+  not silently upgrade the code or present optional telemetry as already configured.
 - Skip `git init` — the project already has its history; just make sure the new `.agents/`
   files get committed in a normal commit once the user reviews them.
 

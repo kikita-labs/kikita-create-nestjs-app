@@ -56,6 +56,9 @@ Inspect every declaration in the file before accepting its location:
 - A `*.util.ts` file contains focused helper functions and private implementation details. It does
   not contain providers, interfaces used elsewhere, or unrelated constants. Put an error helper in
   an `errors/` capability, not in a generic `utilities/` bucket.
+- If the file catches, throws, filters, renders, or logs an error, read
+  `core/logging.md` before accepting it. Check classification, safe fields, transport correlation,
+  redaction, and whether this file is the final boundary that owns the one error log.
 
 ## 2. Check responsibility and decomposition
 
@@ -135,6 +138,8 @@ After the file passes the review above:
 - [ ] The file has one primary responsibility and passes the size/decomposition signals above.
 - [ ] A 200-line function, grab-bag constants file, or unrelated inline declaration was not left
       behind.
+- [ ] Error handling follows `core/logging.md`: no raw exception/payload/secret logging, no
+      console fallback, and no duplicate log-and-rethrow.
 - [ ] The test expectation was decided and the required spec/e2e coverage exists or its exception
       is documented.
 - [ ] Comments explain why/invariants and match current behavior; no narration or stale comments.

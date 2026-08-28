@@ -96,6 +96,10 @@ Map `skills/kikita-create-nestjs-app/templates/.agents/<relpath>` to the project
   `core/messaging.md`, `core/i18n.md`, `agent-surface.md`, bot-specific transport docs): only
   add it if the stored `answers` say the gate is open for this project. Resolve any
   `{{PLACEHOLDER}}` in it from `answers`.
+- `core/health.md` and `core/logging.md` are always-generated docs, not questionnaire-gated. Add
+  them to an older project when they are new upstream, then update the relevant README/AGENTS
+  links. For an adopted project, describe the implementation that actually exists and record gaps;
+  do not claim that a missing logger feature is already wired.
 - **File was deleted upstream**: don't delete the project's copy automatically — flag it and
   ask, since a project may still depend on content that got removed from the template for
   reasons specific to newer scaffolds.

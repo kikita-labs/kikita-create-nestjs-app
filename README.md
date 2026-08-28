@@ -27,6 +27,9 @@ the post-init verification it runs before handing the project back to you.
 - A mandatory per-file review gate after every source change: it checks ownership and placement,
   reusable declarations/entities/constants, decomposition thresholds, test coverage, comments, and
   module wiring. ESLint also blocks hand-written files over 400 lines and functions over 120 lines.
+- A mandatory logging/error policy: structured Pino events, redaction, request/event correlation,
+  one final error boundary, safe cross-process error contracts, and no `console.*` in application
+  code.
 - REST branch: Swagger at `/docs`, URI versioning (`/v1/...`), env-driven CORS allowlist.
 - Bot branch: generic Update-handler transport pattern, with concrete adapters for
   `nestjs-telegraf` (Telegram) and `necord` (Discord) — see

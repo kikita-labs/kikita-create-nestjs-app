@@ -97,6 +97,7 @@ easy to skip because the plugin still "works" (lints clean) with its own default
         'Read env vars through the Zod-validated ConfigService, not process.env directly. ' +
         'See code-style/dto-and-validation.md.',
     }],
+    'no-console': 'error',
     // These caps make the file-change review gate executable. They ignore blank/comment-only lines,
     // but comments are not a way to make an oversized implementation acceptable.
     'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
@@ -230,5 +231,10 @@ Wire it into the `pre-commit` Husky hook alongside `lint-staged` so it's non-opt
       from "Mechanically Enforced Rules" above — not just documented, wired.
 - [ ] `eslint.config.js` actually enforces `max-lines` (400), `max-lines-per-function` (120),
       `complexity` (15), and `max-depth` (4), with only narrow documented exceptions.
+- [ ] `eslint.config.js` blocks `console.*` in application code; logs use `nestjs-pino` and its
+      structured API. Any unavoidable tooling exception is path-specific and documented.
+- [ ] Logging/error changes were reviewed against `.agents/core/logging.md`: expected and
+      unexpected failures are distinguished, redaction and correlation are tested, and an
+      unexpected failure is logged once at its final boundary.
 - [ ] `file-change-review.md` was run for every changed source file, not only once after the whole
       feature was written.

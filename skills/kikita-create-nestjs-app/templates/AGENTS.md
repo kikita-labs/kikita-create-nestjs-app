@@ -106,6 +106,10 @@ strategy), also read:
   `PrismaExceptionFilter` maps Prisma constraint/not-found errors to the matching HTTP
   exception — a Prisma error must never surface as an unhandled 500. See
   `.agents/architecture/transport-adapter.md`'s Bootstrap wiring section.
+- All application and bootstrap logs use `nestjs-pino`; production output is structured JSON,
+  application code has no `console.*`, and secrets/raw exception objects are never logged.
+  Classify expected versus unexpected failures, log unexpected failures once at their final
+  boundary, and include only bounded error fields. See `.agents/core/logging.md`.
 <!-- SCAFFOLD: keep the next two lines only if auth was chosen -->
 - Auth follows the one fixed pattern in `.agents/core/auth.md` — short-lived access token,
   rotated refresh token in an httpOnly cookie, CSRF protection on the refresh route. Do not

@@ -32,6 +32,10 @@ Before every source-file create/change/move in these steps, also re-read
 its gate immediately after that file is written. A file over 400 non-blank, non-comment lines or a
 function over 120 such lines must be split before the scaffold is reported complete.
 
+When a step creates or changes logging, exception, filter, middleware, bot/event, or job-boundary
+code, also read `templates/.agents/core/logging.md` before writing it. Its error taxonomy and
+redaction rules apply to every transport, not only to `src/core/logger/`.
+
 1. **Ask the questionnaire** (`SKILL.md` section 1). Do not proceed until every answer is
    recorded.
 
@@ -113,9 +117,14 @@ function over 120 such lines must be split before the scaffold is reported compl
 6. **Wire logging**: `{{PACKAGE_MANAGER}} add nestjs-pino pino-http`. Same as every other core
    singleton (Prisma, Health, Auth, Queue/Cache/Storage, i18n) — the `forRootAsync()` config
    lives in its own `src/core/logger/logger.module.ts` wrapper, not inlined directly in
-   `AppModule`'s `imports` array. Replace Nest's bootstrap logger with the Pino one in `main.ts`
-   (`bufferLogs: true` + `app.useLogger(app.get(Logger))`, imported straight from `nestjs-pino`
-   — that import is unaffected by the wrapper).
+   `AppModule`'s `imports` array. Configure production JSON/stdout and development pretty output,
+   redact authorization/cookie/set-cookie paths and project-specific secrets, and keep request
+   bodies disabled by default. For HTTP, generate or validate one request ID at the boundary and
+   pass that same value to `pino-http`; do not duplicate request-ID algorithms in separate
+   middleware and logger configuration. Replace Nest's bootstrap logger with the Pino one in
+   `main.ts` (`bufferLogs: true` + `app.useLogger(app.get(Logger))`, imported straight from
+   `nestjs-pino` — that import is unaffected by the wrapper). The mandatory error classification,
+   catch ownership, redaction, and correlation policy lives in `templates/.agents/core/logging.md`.
 
 7. **Wire the app-wide bootstrap concerns** (fixed defaults, always on, regardless of app
    type) — see `templates/.agents/architecture/transport-adapter.md`'s "Bootstrap wiring"
@@ -148,9 +157,13 @@ function over 120 such lines must be split before the scaffold is reported compl
      filter doesn't apply — its own upstream-API error mapping (if any) is a project-specific
      concern, not this fixed default.
    - Error responses use Nest's default `HttpException` JSON shape (`statusCode`, `message`,
-     `error`) — no custom envelope wrapper. The Prisma exception filter's whole job is making
-     sure Prisma errors end up going through that same shape via a real `HttpException`
-     subclass, not inventing a second response format.
+     `error`) for the simple REST baseline — no accidental custom envelope wrapper. If a separate
+     web client, bot, worker, or service consumes the response, define a documented stable error
+     contract with `errorCode`, a safe message, allowlisted details, and a correlation ID as
+     described in `templates/.agents/core/logging.md`; do not expose raw Prisma/provider/error
+     metadata merely to make transports look alike. The Prisma exception filter's whole job is
+     making known Prisma errors end up as safe `HttpException` subclasses, not inventing a second
+     format or a generic unclassified 500.
 
 8. **Wire the transport layer(s)** per the application-type answer — see
    `templates/.agents/architecture/transport-adapter.md` for the full pattern:
@@ -318,7 +331,8 @@ function over 120 such lines must be split before the scaffold is reported compl
       `messaging.md` only if messaging was chosen.
     - `.agents/shared/README.md` and `.agents/core/README.md` — both start with a registry
       table pre-populated with the always-on entries (Prisma, Logger, Health, the global
-      Prisma exception filter), plus `core/health.md` (always, not gated) and `core/auth.md` /
+      Prisma exception filter), plus `core/health.md` and `core/logging.md` (always, not gated) and
+      `core/auth.md` /
       `core/queue.md` / `core/cache.md` / `core/storage.md` / `core/i18n.md` only for the
       features actually chosen.
     - `.agents/decisions/README.md` — always generated, starts with no ADR files.
